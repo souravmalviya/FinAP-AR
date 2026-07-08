@@ -1,0 +1,19 @@
+# Infrastructure the product needs, in one command:  docker compose up -d
+#
+# Valkey = the open-source, Linux Foundation fork of Redis (BSD licensed).
+# BullMQ (our job queue library) speaks the Redis protocol, so it works with
+# Valkey unchanged. Jobs live here — they survive app restarts.
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: finerp-valkey
+    ports:
+      - "6379:6379"
+    # Append-only file = jobs are persisted to disk, not just RAM.
+    command: valkey-server --appendonly yes
+    volumes:
+      - valkey-data:/data
+    restart: unless-stopped
+
+volumes:
+  valkey-data:

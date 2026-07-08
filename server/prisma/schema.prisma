@@ -1,0 +1,167 @@
+// ============================================================================
+//  finErpAP — the AP automation product's OWN database
+// ----------------------------------------------------------------------------
+//  IMPORTANT ARCHITECTURE RULE:
+//  This DB stores the *workflow* (documents, extractions, approvals, audit).
+//  It NEVER stores financial truth — that lives in the ERP (Mini-ERP, :4000).
+//  The pipeline reads/writes the ERP only through its REST API.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A person who can log into the dashboard. The role decides what they may do:
+//   AP_CLERK     -> upload & watch documents, no approvals
+//   FINANCE_HEAD -> approve invoices in their band (50k–5L) + pay
+//   CFO          -> approve anything + pay
+//   ADMIN        -> everything (org owner)
+model User {
+  id             String   @id @default(uuid())
+  organizationId String
+  email          String   @unique
+  name           String
+  passwordHash   String
+  role           UserRole
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+enum UserRole {
+  ADMIN
+  AP_CLERK
+  FINANCE_HEAD
+  CFO
+  EMPLOYEE // view-only: can see documents, cannot upload/approve/pay
+}
+
+// One row per incoming invoice file (from upload today, email later).
+model IngestedDocument {
+  id             String    @id @default(uuid())
+  organizationId String
+  source         DocSource @default(UPLOAD)
+  fileName       String
+  storageKey     String // where the raw PDF lives (S3-style key)
+  sha256         String // fingerprint of the file bytes -> duplicate detection
+  status         DocStatus @default(RECEIVED)
+  failReason     String? // human-readable reason when NEEDS_REVIEW / FAILED
+
+  // Links into the ERP (the system of record)
+  erpInvoiceId String?
+  erpPoId      String?
+
+  extraction Extraction?
+  approval   ApprovalTask?
+  events     WorkflowEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The same file (same bytes) can only be ingested once per organization.
+  @@unique([organizationId, sha256])
+  @@index([organizationId, status])
+}
+
+// What the AI (or mock parser) read out of the PDF.
+model Extraction {
+  id         String           @id @default(uuid())
+  documentId String           @unique
+  document   IngestedDocument @relation(fields: [documentId], references: [id])
+
+  rawText    String  @db.Text // full text pulled from the PDF
+  vendorName String?
+  invoiceNo  String?
+  poNumber   String? // "PO Ref" printed on the invoice, used for matching
+  amount     Decimal? @db.Decimal(14, 2)
+  dueDate    DateTime?
+  engine     ExtractEngine // MOCK or CLAUDE — always recorded for audit
+
+  createdAt DateTime @default(now())
+}
+
+// A human sign-off requirement produced by the routing rules.
+model ApprovalTask {
+  id             String           @id @default(uuid())
+  organizationId String
+  documentId     String           @unique
+  document       IngestedDocument @relation(fields: [documentId], references: [id])
+
+  requiredRole ApproverRole
+  status       ApprovalStatus @default(PENDING)
+  decidedBy    String? // who clicked (free text for v1)
+  decidedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, status])
+}
+
+// Append-only audit log: every step, every decision, who/what made it.
+model WorkflowEvent {
+  id             String           @id @default(uuid())
+  organizationId String
+  documentId     String
+  document       IngestedDocument @relation(fields: [documentId], references: [id])
+
+  step    String // e.g. "EXTRACT", "VERIFY", "ROUTE", "APPROVE", "PAY"
+  actor   Actor // SYSTEM | AI | RULE | HUMAN — *who* decided
+  message String // human-readable summary shown in the UI timeline
+  data    Json? // structured detail (amounts compared, rule fired, etc.)
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+// --- ENUMS ------------------------------------------------------------------
+
+enum DocSource {
+  UPLOAD
+  EMAIL
+}
+
+// The document's journey through the pipeline.
+enum DocStatus {
+  RECEIVED // file stored, hash checked
+  QUEUED // job placed on the queue
+  EXTRACTING // worker is reading the PDF
+  NEEDS_REVIEW // rules found a problem (mismatch/unknown vendor/no PO)
+  MATCHED // verified clean against the ERP's PO
+  PENDING_APPROVAL // waiting for a human
+  APPROVED // human (or auto-rule) said yes; ERP updated
+  REJECTED // human said no
+  PAID // payment recorded in the ERP
+  DUPLICATE // same file bytes or same invoice already processed
+  FAILED // unexpected error after retries
+}
+
+enum ExtractEngine {
+  MOCK
+  CLAUDE
+  OPENROUTER
+}
+
+enum ApproverRole {
+  FINANCE_HEAD // 50k – 5,00,000
+  CFO // > 5,00,000
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Actor {
+  SYSTEM
+  AI
+  RULE
+  HUMAN
+}
