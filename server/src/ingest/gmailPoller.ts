@@ -8,20 +8,29 @@ import { ingestFile } from "./ingestFile.js";
 //
 //  Every GMAIL_POLL_SECONDS it:
 //    1. connects to the inbox over IMAP (app-password auth)
-//    2. finds UNSEEN messages
-//    3. downloads every PDF attachment
-//    4. hands each PDF to ingestFile() — the same door the upload button uses
-//    5. marks the message as seen (so the next poll skips it)
+//    2. lists ALL messages of the last 3 days (NOT just unread ones — see below)
+//    3. skips UIDs already processed this session
+//    4. downloads every PDF attachment
+//    5. hands each PDF to ingestFile() — the same door the upload button uses
 //
-//  Design notes:
-//  - Fresh connection per poll: simpler than keeping one alive, and at a 60s
-//    cadence the overhead is irrelevant. No stale-connection bugs.
-//  - Recursive setTimeout (not setInterval): a slow poll can never overlap
-//    with the next one.
+//  Why not "unread only"? We tried that first. It breaks the moment anything
+//  else touches the inbox: a human opening the email, a phone mail app, or
+//  Gmail itself marks the message read, and the poller goes blind forever.
+//  Instead we scan a recent window and rely on TWO idempotency layers:
+//    - an in-memory set of processed UIDs (skips refetching within a session)
+//    - ingestFile's sha256 dedupe (skips re-ingesting across restarts)
+//  After a restart the first poll re-examines the window once; every
+//  already-ingested PDF is dropped by the hash check. Correct by design.
+//
+//  Other design notes:
+//  - Fresh connection per poll: no stale-connection bugs at a 60s cadence.
+//  - Recursive setTimeout (not setInterval): polls can never overlap.
 //  - Everything is wrapped in try/catch: an inbox hiccup logs and waits for
 //    the next tick — the poller must never crash the server.
-//  - Duplicate emails/PDFs are harmless: ingestFile's sha256 check skips them.
 // ----------------------------------------------------------------------------
+
+const LOOKBACK_DAYS = 3;
+const processedUids = new Set<number>();
 
 export function startGmailPoller(): void {
   if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
@@ -60,14 +69,16 @@ async function pollOnce(): Promise<void> {
     // Lock the mailbox while we work with it (imapflow requirement).
     const lock = await client.getMailboxLock("INBOX");
     try {
-      const unseen = await client.search({ seen: false });
-      if (!unseen || unseen.length === 0) return;
+      const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000);
+      const uids = (await client.search({ since }, { uid: true })) || [];
+      const fresh = uids.filter((u) => !processedUids.has(u));
+      if (fresh.length === 0) return;
 
-      console.log(`[gmail] ${unseen.length} unread email(s) found`);
+      console.log(`[gmail] ${fresh.length} new email(s) in the ${LOOKBACK_DAYS}-day window`);
 
-      for (const uid of unseen) {
+      for (const uid of fresh) {
         // Download the full raw message and parse it (headers, body, attachments).
-        const msg = await client.fetchOne(uid, { source: true });
+        const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
         if (!msg || !msg.source) continue;
         const parsed = await simpleParser(msg.source);
 
@@ -97,9 +108,9 @@ async function pollOnce(): Promise<void> {
           }
         }
 
-        // Mark seen ONLY after successful processing — if we crashed above,
-        // the email stays unread and the next poll retries it.
-        await client.messageFlagsAdd(uid, ["\\Seen"]);
+        // Remember this UID only AFTER successful processing — if anything
+        // above threw, the next poll retries this email.
+        processedUids.add(uid);
       }
     } finally {
       lock.release();

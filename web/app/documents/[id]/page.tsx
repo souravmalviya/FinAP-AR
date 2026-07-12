@@ -66,7 +66,6 @@ export default function DocumentDetailPage() {
           </button>
         )}
       </p>
-
       {doc.failReason && <div className="flag">🚩 {doc.failReason}</div>}
 
       <div className="grid2">

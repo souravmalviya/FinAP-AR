@@ -12,9 +12,7 @@ import { processDocument } from "./processDocument.js";
 //    - retries automatically with exponential backoff,
 //    - never runs the same document twice at once.
 //
-//  NOTE the adapter payoff: we swapped pg-boss -> BullMQ/Valkey and ONLY this
-//  file changed. startQueue() and enqueueDocument() kept their signatures, so
-//  app.ts and index.ts didn't move a line. (Same story as the pdf-parse swap.)
+//  
 // ----------------------------------------------------------------------------
 
 export const QUEUE_NAME = "process-document";
