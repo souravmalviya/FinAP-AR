@@ -3,8 +3,8 @@ import "./globals.css";
 import OrgHeader from "@/components/OrgHeader";
 
 export const metadata: Metadata = {
-  title: "finErpAP — AP Automation",
-  description: "Invoice pipeline dashboard",
+  title: "Verity — AP Automation",
+  description: "Every invoice, verified.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

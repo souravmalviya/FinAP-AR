@@ -1,4 +1,6 @@
-# finErpAP — AP Automation Product
+# Verity — AP Automation Product
+
+> *Every invoice, verified.* (codebase name: finErpAP)
 
 The full product from the architecture diagrams: invoice PDFs come in, AI
 extracts, **rules verify against the ERP**, approvals get routed, payments get

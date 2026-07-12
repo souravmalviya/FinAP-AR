@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "@/lib/api";
+import Logo from "@/components/Logo";
 
 // The front door. On success the token + user land in localStorage and every
 // later API call carries them. Role decides what the server lets you do.
@@ -30,9 +31,16 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: "60px auto" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, justifyContent: "center" }}>
+        <Logo size={40} />
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.3px" }}>Verity</div>
+          <div style={{ fontSize: 12, color: "var(--text-3)" }}>Every invoice, verified.</div>
+        </div>
+      </div>
       <div className="card pad">
         <h1 style={{ marginBottom: 4 }}>Sign in</h1>
-        <p className="sub">finErpAP — AP automation dashboard</p>
+        <p className="sub">AP automation dashboard</p>
 
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>

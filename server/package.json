@@ -1,7 +1,7 @@
 {
-  "name": "finerp-ap-server",
+  "name": "verity-server",
   "version": "1.0.0",
-  "description": "AP automation pipeline: ingest invoice PDFs, extract with AI, verify with rules against the Mini-ERP, route approvals, pay.",
+  "description": "Verity pipeline: ingest invoice PDFs (upload/email), AI extraction, rule verification against the ERP, RBAC approvals, audit.",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { register } from "@/lib/api";
+import Logo from "@/components/Logo";
 
 // Self-service sign-up with a designation dropdown. The chosen role decides
 // what the server will allow (EMPLOYEE = view-only). Registering logs you in
@@ -51,9 +52,16 @@ export default function RegisterPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: "60px auto" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, justifyContent: "center" }}>
+        <Logo size={40} />
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.3px" }}>Verity</div>
+          <div style={{ fontSize: 12, color: "var(--text-3)" }}>Every invoice, verified.</div>
+        </div>
+      </div>
       <div className="card pad">
         <h1 style={{ marginBottom: 4 }}>Create account</h1>
-        <p className="sub">Join your team&apos;s finErpAP workspace</p>
+        <p className="sub">Join your team&apos;s Verity workspace</p>
 
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>

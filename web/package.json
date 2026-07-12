@@ -1,8 +1,8 @@
 {
-  "name": "finerp-ap-web",
+  "name": "verity-web",
   "version": "1.0.0",
   "private": true,
-  "description": "Dashboard for the AP automation product — documents, approvals, audit timelines.",
+  "description": "Verity dashboard — AP automation (every invoice, verified)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

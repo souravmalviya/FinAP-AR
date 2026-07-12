@@ -22,7 +22,7 @@ async function main() {
   console.log(`Queue dashboard: http://localhost:${env.PORT}/admin/queues`);
 
   app.listen(env.PORT, () => {
-    console.log(`finErpAP pipeline API running on http://localhost:${env.PORT}`);
+    console.log(`Verity pipeline API running on http://localhost:${env.PORT}`);
     console.log(`Talking to ERP at ${env.ERP_BASE_URL}`);
     const engine = env.ANTHROPIC_API_KEY
       ? "CLAUDE (real AI, direct)"
