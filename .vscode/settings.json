@@ -1,0 +1,30 @@
+{
+  // ---- Stops the "file changed on disk / overwrite?" dialog ----
+  // Auto-save flushes edits to disk immediately, so VS Code never holds a
+  // stale unsaved buffer that could conflict with dev-server / OneDrive writes.
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 800,
+  // Don't restore old unsaved editor buffers when reopening the folder.
+  "files.hotExit": "off",
+
+  // ---- Stops dev servers + OneDrive churn from disturbing the editor ----
+  // These directories change constantly and should NOT be watched or indexed.
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/.git/**": true,
+    "**/storage/**": true,
+    "**/samples/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true,
+    "**/storage": true
+  },
+  "files.exclude": {
+    "**/.next": true,
+    "**/dist": true
+  }
+}
