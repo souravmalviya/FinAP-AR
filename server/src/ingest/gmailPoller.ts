@@ -4,14 +4,14 @@ import { env } from "../config/env.js";
 import { ingestFile } from "./ingestFile.js";
 
 // ----------------------------------------------------------------------------
-//  Gmail poller (Layer 1 of the architecture: INPUT — the email adapter).
+//  Gmail poller (Layer 1 of the architecture: INPUT - the email adapter).
 //
 //  Every GMAIL_POLL_SECONDS it:
 //    1. connects to the inbox over IMAP (app-password auth)
-//    2. lists ALL messages of the last 3 days (NOT just unread ones — see below)
+//    2. lists ALL messages of the last 3 days (NOT just unread ones - see below)
 //    3. skips UIDs already processed this session
 //    4. downloads every PDF attachment
-//    5. hands each PDF to ingestFile() — the same door the upload button uses
+//    5. hands each PDF to ingestFile() - the same door the upload button uses
 //
 //  Why not "unread only"? We tried that first. It breaks the moment anything
 //  else touches the inbox: a human opening the email, a phone mail app, or
@@ -26,7 +26,7 @@ import { ingestFile } from "./ingestFile.js";
 //  - Fresh connection per poll: no stale-connection bugs at a 60s cadence.
 //  - Recursive setTimeout (not setInterval): polls can never overlap.
 //  - Everything is wrapped in try/catch: an inbox hiccup logs and waits for
-//    the next tick — the poller must never crash the server.
+//    the next tick - the poller must never crash the server.
 // ----------------------------------------------------------------------------
 
 const LOOKBACK_DAYS = 3;
@@ -34,7 +34,7 @@ const processedUids = new Set<number>();
 
 export function startGmailPoller(): void {
   if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
-    console.log("[gmail] no GMAIL_USER / GMAIL_APP_PASSWORD set — email ingestion off");
+    console.log("[gmail] no GMAIL_USER / GMAIL_APP_PASSWORD set - email ingestion off");
     return;
   }
 
@@ -90,7 +90,7 @@ async function pollOnce(): Promise<void> {
         );
 
         if (pdfs.length === 0) {
-          console.log(`[gmail] "${parsed.subject}" from ${from} — no PDF attachments, skipping`);
+          console.log(`[gmail] "${parsed.subject}" from ${from} - no PDF attachments, skipping`);
         }
 
         for (const pdf of pdfs) {
@@ -102,13 +102,13 @@ async function pollOnce(): Promise<void> {
             "EMAIL"
           );
           if (result.duplicate) {
-            console.log(`[gmail] "${name}" from ${from} — duplicate, skipped`);
+            console.log(`[gmail] "${name}" from ${from} - duplicate, skipped`);
           } else {
-            console.log(`[gmail] "${name}" from ${from} — ingested → pipeline`);
+            console.log(`[gmail] "${name}" from ${from} - ingested → pipeline`);
           }
         }
 
-        // Remember this UID only AFTER successful processing — if anything
+        // Remember this UID only AFTER successful processing - if anything
         // above threw, the next poll retries this email.
         processedUids.add(uid);
       }

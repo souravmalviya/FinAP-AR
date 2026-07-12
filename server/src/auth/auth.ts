@@ -9,7 +9,7 @@ import { env } from "../config/env.js";
 //
 //  Flow: POST /api/auth/login checks email+password -> issues a signed JWT.
 //  Every later request carries "Authorization: Bearer <token>".
-//  requireAuth() verifies the token and attaches the user to the request —
+//  requireAuth() verifies the token and attaches the user to the request -
 //  including organizationId, so THE TENANT NOW COMES FROM IDENTITY, not from
 //  a spoofable x-org-id header. That's the security upgrade.
 // ----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ export function verifyPassword(plain: string, hash: string): boolean {
 }
 
 export function signToken(user: AuthUser): string {
-  // The token carries everything we need — no DB hit per request.
+  // The token carries everything we need - no DB hit per request.
   return jwt.sign(user, env.JWT_SECRET, { expiresIn: "12h" });
 }
 
@@ -46,7 +46,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     (req as any).orgId = user.organizationId; // downstream code keeps working unchanged
     next();
   } catch {
-    return res.status(401).json({ error: "Session expired — log in again" });
+    return res.status(401).json({ error: "Session expired - log in again" });
   }
 }
 

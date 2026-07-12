@@ -2,14 +2,14 @@ import { env } from "../config/env.js";
 import { ExtractedInvoice, Extractor } from "./extractor.js";
 
 // ----------------------------------------------------------------------------
-//  OPENROUTER engine — real AI extraction via OpenRouter (openrouter.ai).
+//  OPENROUTER engine - real AI extraction via OpenRouter (openrouter.ai).
 //
 //  Why OpenRouter? One API key fronts many models (Claude, GPT, Gemini...).
 //  The model is picked by env var OPENROUTER_MODEL, so switching models is a
 //  config change, not a code change.
 //
 //  OpenRouter speaks the OpenAI chat-completions format, so we call it with
-//  plain fetch — no SDK needed. As always: the answer is treated as UNTRUSTED
+//  plain fetch - no SDK needed. As always: the answer is treated as UNTRUSTED
 //  and re-verified by the rules layer before any money moves.
 // ----------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ export const openRouterExtractor: Extractor = {
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      // Throwing lets the queue retry (and eventually mark FAILED) — we never
+      // Throwing lets the queue retry (and eventually mark FAILED) - we never
       // silently continue with empty data.
       throw new Error(`OpenRouter error ${res.status}: ${body.slice(0, 200)}`);
     }

@@ -1,8 +1,8 @@
-# 🏃 Runbook — start everything yourself
+# 🏃 Runbook - start everything yourself
 
 Open **3 terminals in VS Code** (`Ctrl+Shift+` ` opens a terminal, click `+` for more).
 
-## Terminal 0 — Valkey (the queue broker)
+## Terminal 0 - Valkey (the queue broker)
 
 > Docker Desktop must be running first (Start menu → Docker Desktop → wait for "Engine running").
 
@@ -11,10 +11,10 @@ cd C:\Users\Soura\OneDrive\Desktop\finErpAP
 docker compose up -d
 ```
 
-Runs in the background — this terminal is free again after it prints "Started".
+Runs in the background - this terminal is free again after it prints "Started".
 (Stop it later with `docker compose stop` from the same folder.)
 
-## Terminal 1 — Mini-ERP (system of record)
+## Terminal 1 - Mini-ERP (system of record)
 
 ```powershell
 cd C:\Users\Soura\OneDrive\Desktop\miniERP
@@ -23,17 +23,17 @@ npm run dev
 
 → UI + API at **http://localhost:4000**
 
-## Terminal 2 — finErpAP pipeline (backend)
+## Terminal 2 - finErpAP pipeline (backend)
 
 ```powershell
 cd C:\Users\Soura\OneDrive\Desktop\finErpAP\server
 npm run dev
 ```
 
-→ API at **http://localhost:5000** — watch this terminal: every pipeline step
+→ API at **http://localhost:5000** - watch this terminal: every pipeline step
 logs here (`[EXTRACT] (AI) ...`, `[VERIFY] (RULE) ...`).
 
-## Terminal 3 — Dashboard (frontend)
+## Terminal 3 - Dashboard (frontend)
 
 ```powershell
 cd C:\Users\Soura\OneDrive\Desktop\finErpAP\web
@@ -89,12 +89,12 @@ Get-NetTCPConnection -LocalPort 3000 -State Listen | ForEach-Object { Stop-Proce
 | 5000 | Pipeline API + worker | `finErpAP\server` |
 | 4000 | Mini-ERP UI + API | `miniERP` |
 | 6379 | Valkey (Docker) | `finErpAP` (compose file) |
-| 5432 | PostgreSQL (Windows service, always on) | — |
+| 5432 | PostgreSQL (Windows service, always on) | - |
 
 ## Handy extras
 
 ```powershell
-npx prisma studio     # visual DB browser — run inside miniERP or finErpAP\server
+npx prisma studio     # visual DB browser - run inside miniERP or finErpAP\server
 docker ps             # is Valkey running?
 docker logs finerp-valkey --tail 20
 ```

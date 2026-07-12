@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ApprovalTask, approveTask, getUser, inr, listApprovals, rejectTask, SessionUser } from "@/lib/api";
 
 // ----------------------------------------------------------------------------
-//  Approvals inbox — the ONLY place a human is needed on the happy path.
+//  Approvals inbox - the ONLY place a human is needed on the happy path.
 //  The rule engine already verified these; the human applies judgement to
 //  the ones above the auto-approve threshold.
 // ----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ export default function ApprovalsPage() {
 
   useEffect(() => setUser(getUser()), []);
 
-  // Mirror of the server's rule — the server is still the law; this only
+  // Mirror of the server's rule - the server is still the law; this only
   // makes the UI honest about what will be allowed.
   const canDecide = (t: ApprovalTask) =>
     !!user && (user.role === "CFO" || user.role === "ADMIN" || user.role === t.requiredRole);
@@ -39,7 +39,7 @@ export default function ApprovalsPage() {
   }, [refresh]);
 
   async function decide(task: ApprovalTask, decision: "approve" | "reject") {
-    // No name prompt anymore — the server records the logged-in user.
+    // No name prompt anymore - the server records the logged-in user.
     setBusyId(task.id);
     setError(null);
     try {
@@ -78,7 +78,7 @@ export default function ApprovalsPage() {
                 ))}</tr>
               ))}
             {tasks !== null && tasks.length === 0 && (
-              <tr><td colSpan={5} className="empty">Inbox zero — nothing waiting for a human. 🎉</td></tr>
+              <tr><td colSpan={5} className="empty">Inbox zero - nothing waiting for a human. 🎉</td></tr>
             )}
             {(tasks ?? []).map((t) => (
               <tr key={t.id}>
@@ -87,7 +87,7 @@ export default function ApprovalsPage() {
                     {t.document?.extraction?.invoiceNo ?? t.documentId.slice(0, 8)}
                   </Link>
                 </td>
-                <td>{t.document?.extraction?.vendorName ?? "—"}</td>
+                <td>{t.document?.extraction?.vendorName ?? "-"}</td>
                 <td style={{ fontWeight: 700 }}>{inr(t.document?.extraction?.amount)}</td>
                 <td><span className="badge s-PENDING_APPROVAL">{t.requiredRole.replace(/_/g, " ")}</span></td>
                 <td>
@@ -97,7 +97,7 @@ export default function ApprovalsPage() {
                       <button className="btn red sm" disabled={busyId === t.id} onClick={() => decide(t, "reject")}>✗ Reject</button>
                     </>
                   ) : (
-                    <span className="dim" title={`Requires ${t.requiredRole} — you are ${user?.role}`}>
+                    <span className="dim" title={`Requires ${t.requiredRole} - you are ${user?.role}`}>
                       🔒 {t.requiredRole.replace(/_/g, " ")} only
                     </span>
                   )}

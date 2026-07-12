@@ -5,7 +5,7 @@
       <stop offset="1" stop-color="#7c3aed"/>
     </linearGradient>
   </defs>
-  <!-- Verity mark: the V is drawn as a checkmark — truth and verification in one stroke -->
+  <!-- Verity mark: the V is drawn as a checkmark - truth and verification in one stroke -->
   <rect width="64" height="64" rx="14" fill="url(#vg)"/>
   <path d="M 17 25 L 29 46 L 48 15"
         fill="none" stroke="#ffffff" stroke-width="7.5"

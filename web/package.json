@@ -2,7 +2,7 @@
   "name": "verity-web",
   "version": "1.0.0",
   "private": true,
-  "description": "Verity dashboard — AP automation (every invoice, verified)",
+  "description": "Verity dashboard - AP automation (every invoice, verified)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

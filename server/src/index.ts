@@ -12,7 +12,7 @@ async function main() {
   await startQueue();
   startGmailPoller();
 
-  // Bull Board — live queue dashboard at /admin/queues (waiting, active,
+  // Bull Board - live queue dashboard at /admin/queues (waiting, active,
   // completed, failed jobs; retry buttons). Dev tool: in production this
   // would sit behind an ADMIN-only guard.
   const boardAdapter = new ExpressAdapter();

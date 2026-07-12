@@ -20,14 +20,14 @@ export const env = {
   GMAIL_APP_PASSWORD: (process.env.GMAIL_APP_PASSWORD ?? "").replace(/\s+/g, ""), // Google shows it with spaces
   GMAIL_POLL_SECONDS: Number(process.env.GMAIL_POLL_SECONDS) || 60,
   GMAIL_ORG_ID: process.env.GMAIL_ORG_ID ?? "org_demo", // which tenant emailed invoices belong to
-  // Valkey (open-source Redis fork) — the queue's broker.
+  // Valkey (open-source Redis fork) - the queue's broker.
   // In the cloud (Railway/Upstash), set VALKEY_URL to the full connection
-  // string (redis://:password@host:port) — it wins over host/port.
+  // string (redis://:password@host:port) - it wins over host/port.
   VALKEY_URL: process.env.VALKEY_URL ?? "",
   VALKEY_HOST: process.env.VALKEY_HOST ?? "localhost",
   VALKEY_PORT: Number(process.env.VALKEY_PORT) || 6379,
 };
 
 if (!env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is missing — copy .env.example to .env");
+  throw new Error("DATABASE_URL is missing - copy .env.example to .env");
 }

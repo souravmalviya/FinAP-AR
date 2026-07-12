@@ -9,7 +9,7 @@ import { route } from "../rules/route.js";
 import * as erp from "../erp/erpClient.js";
 
 // ----------------------------------------------------------------------------
-//  THE PIPELINE — one document's journey, exactly the explainer diagram:
+//  THE PIPELINE - one document's journey, exactly the explainer diagram:
 //
 //    EXTRACT (AI)  ->  VERIFY (rules)  ->  ERP WRITE  ->  ROUTE (rules)
 //
@@ -19,7 +19,7 @@ import * as erp from "../erp/erpClient.js";
 
 export async function processDocument(documentId: string): Promise<void> {
   const doc = await prisma.ingestedDocument.findUnique({ where: { id: documentId } });
-  if (!doc) return; // deleted meanwhile — nothing to do
+  if (!doc) return; // deleted meanwhile - nothing to do
 
   // Idempotency guard: if a retry lands after we already finished, skip.
   // Only documents still in QUEUED state are processed.
@@ -55,7 +55,7 @@ export async function processDocument(documentId: string): Promise<void> {
       `Engine ${extractor.name} read: vendor="${extracted.vendorName}" invoice=${extracted.invoiceNo} po=${extracted.poNumber} amount=${extracted.amount}`,
       { extracted });
 
-    // ---- STEP: VERIFY (rules — the safety net) ----------------------------
+    // ---- STEP: VERIFY (rules - the safety net) ----------------------------
     const verdict = await verify(orgId, extracted);
     if (!verdict.ok) {
       await prisma.ingestedDocument.update({
@@ -63,7 +63,7 @@ export async function processDocument(documentId: string): Promise<void> {
         data: { status: "NEEDS_REVIEW", failReason: verdict.reason },
       });
       await audit(orgId, documentId, "VERIFY", "RULE", `FLAGGED: ${verdict.reason}`, verdict.detail);
-      return; // stops here — a human must look at it. No money moves.
+      return; // stops here - a human must look at it. No money moves.
     }
     await audit(orgId, documentId, "VERIFY", "RULE",
       `Clean ✓ vendor=${verdict.vendor.name}, PO=${verdict.po.poNumber}, amounts equal`);
@@ -86,7 +86,7 @@ export async function processDocument(documentId: string): Promise<void> {
           where: { id: documentId },
           data: { status: "DUPLICATE", failReason: `ERP: ${e.message}` },
         });
-        await audit(orgId, documentId, "ERP_SYNC", "RULE", `Duplicate invoice number — ${e.message}`);
+        await audit(orgId, documentId, "ERP_SYNC", "RULE", `Duplicate invoice number - ${e.message}`);
         return;
       }
       throw e; // real failure -> let the queue retry
@@ -118,7 +118,7 @@ export async function processDocument(documentId: string): Promise<void> {
         where: { id: documentId }, data: { status: "PENDING_APPROVAL" },
       });
       await audit(orgId, documentId, "ROUTE", "RULE",
-        `₹${extracted.amount} requires ${decision.role} approval — task created`);
+        `₹${extracted.amount} requires ${decision.role} approval - task created`);
     }
   } catch (err) {
     // Let pg-boss retry; if retries are exhausted it stays FAILED.

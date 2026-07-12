@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>System Map — everything built so far</title>
+<title>System Map - everything built so far</title>
 <style>
   :root {
     --bg: #fbfbf8; --surface: #fff; --border: #e5e7ee; --text: #1a2030;
@@ -134,23 +134,23 @@
 <div class="doc">
 
 <h1>🗺️ The System Map</h1>
-<div class="datestamp">Everything built so far — miniERP + finErpAP · July 2026</div>
+<div class="datestamp">Everything built so far - miniERP + finErpAP · July 2026</div>
 <div class="printhint">💡 To save as PDF: press <b>Ctrl + P</b> → destination "Save as PDF". Each section starts on its own page.</div>
 
 <!-- ============================================================ 1 -->
 <h2><span class="no">1.</span> What exists right now</h2>
-<p class="lead">Four services that together replicate a Procindex-style AP automation product. Two codebases, two databases, one queue — all talking over HTTP.</p>
+<p class="lead">Four services that together replicate a Procindex-style AP automation product. Two codebases, two databases, one queue - all talking over HTTP.</p>
 
 <div class="ports">
-  <div class="port" style="--pc:#4f46e5"><b>Dashboard</b><span class="u">localhost:3000</span><small>Next.js — what the finance team sees</small></div>
-  <div class="port" style="--pc:#7c3aed"><b>Pipeline API + Worker</b><span class="u">localhost:5000</span><small>Express — ingest → AI → rules → route</small></div>
-  <div class="port" style="--pc:#0d9488"><b>Mini-ERP</b><span class="u">localhost:4000</span><small>Express — the system of record</small></div>
-  <div class="port" style="--pc:#be185d"><b>Valkey (Docker)</b><span class="u">localhost:6379</span><small>queue broker — jobs survive restarts</small></div>
+  <div class="port" style="--pc:#4f46e5"><b>Dashboard</b><span class="u">localhost:3000</span><small>Next.js - what the finance team sees</small></div>
+  <div class="port" style="--pc:#7c3aed"><b>Pipeline API + Worker</b><span class="u">localhost:5000</span><small>Express - ingest → AI → rules → route</small></div>
+  <div class="port" style="--pc:#0d9488"><b>Mini-ERP</b><span class="u">localhost:4000</span><small>Express - the system of record</small></div>
+  <div class="port" style="--pc:#be185d"><b>Valkey (Docker)</b><span class="u">localhost:6379</span><small>queue broker - jobs survive restarts</small></div>
   <div class="port" style="--pc:#64748b"><b>PostgreSQL ×2</b><span class="u">localhost:5432</span><small>databases: <code>mini_erp</code> + <code>finerp_ap</code></small></div>
 </div>
 
 <!-- ============================================================ 2 -->
-<h2><span class="no">2.</span> The workflow — the whole journey, hand-drawn</h2>
+<h2><span class="no">2.</span> The workflow - the whole journey, hand-drawn</h2>
 <p class="lead">One invoice's life, from purchase order to payment. Colors say <i>who acts</i>: purple = AI, green = rules, blue = storage, pink = queue, amber = human, teal = the ERP.</p>
 
 <div class="sketch">
@@ -164,34 +164,34 @@
   </div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">📥 INGEST — the front door<span class="sk-tag k-store">STORE</span>
+  <div class="sk-box">📥 INGEST - the front door<span class="sk-tag k-store">STORE</span>
     <small><span class="mono">server/src/app.ts → POST /api/documents/upload</span><br>save bytes (storage.ts) · sha256 duplicate check (hash.ts) · DB row: QUEUED</small>
   </div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">📬 QUEUE — job dropped into Valkey<span class="sk-tag k-q">QUEUE</span>
+  <div class="sk-box">📬 QUEUE - job dropped into Valkey<span class="sk-tag k-q">QUEUE</span>
     <small><span class="mono">server/src/pipeline/queue.ts</span> · BullMQ · retries 3× (5s→10s→20s)<br>upload returns instantly; the worker takes over from here</small>
   </div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">🤖 EXTRACT — PDF becomes clean JSON<span class="sk-tag k-ai">AI</span>
+  <div class="sk-box">🤖 EXTRACT - PDF becomes clean JSON<span class="sk-tag k-ai">AI</span>
     <small><span class="mono">server/src/extraction/</span> · pdfText.ts → mock OR Claude engine<br>{ vendor, invoiceNo, poNumber, amount, dueDate }</small>
   </div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">✅ VERIFY — 5 rules guard the money<span class="sk-tag k-rule">RULES</span>
+  <div class="sk-box">✅ VERIFY - 5 rules guard the money<span class="sk-tag k-rule">RULES</span>
     <small><span class="mono">server/src/rules/verify.ts</span><br>fields present? vendor known? PO exists? same vendor? <b>amounts equal?</b></small>
   </div>
 
   <div class="sk-split">
-    <div class="sk-box" style="border-color:#dc2626"><span style="color:#dc2626">✗ any rule fails</span><small>status NEEDS_REVIEW + reason<br>a human investigates — no money moves</small></div>
+    <div class="sk-box" style="border-color:#dc2626"><span style="color:#dc2626">✗ any rule fails</span><small>status NEEDS_REVIEW + reason<br>a human investigates - no money moves</small></div>
     <div class="sk-box" style="border-color:#059669"><span style="color:#059669">✓ all clean</span><small>continue ↓</small></div>
   </div>
 
   <div class="sk-note">⤵ writes invoice INTO the ERP, linked to the PO → ERP auto-marks PO “MATCHED”  (erpClient.ts → :4000)</div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">🧭 ROUTE — who must approve?<span class="sk-tag k-rule">RULES</span>
+  <div class="sk-box">🧭 ROUTE - who must approve?<span class="sk-tag k-rule">RULES</span>
     <small><span class="mono">server/src/rules/route.ts</span></small>
   </div>
 
@@ -202,7 +202,7 @@
   </div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-box">👤 APPROVALS INBOX — the human moment<span class="sk-tag k-human">HUMAN</span>
+  <div class="sk-box">👤 APPROVALS INBOX - the human moment<span class="sk-tag k-human">HUMAN</span>
     <small>dashboard :3000 /approvals · ✓ Approve or ✗ Reject · name goes into the audit log</small>
   </div>
   <div class="sk-arrow">⇣</div>
@@ -214,7 +214,7 @@
   <div class="sk-note">⤵ payment written INTO the ERP → invoice PAID · PO CLOSED (atomic transaction)</div>
   <div class="sk-arrow">⇣</div>
 
-  <div class="sk-erp"><div class="t">🗄️ MiniERP — books closed</div><small>invoice ACR-556: PAID · PO-2026-007: CLOSED · full history kept</small></div>
+  <div class="sk-erp"><div class="t">🗄️ MiniERP - books closed</div><small>invoice ACR-556: PAID · PO-2026-007: CLOSED · full history kept</small></div>
   <div class="sk-arrow">⇣</div>
 
   <div class="sk-box">📊 DASHBOARD (:3000)<span class="sk-tag k-human">UI</span>
@@ -223,8 +223,8 @@
 
 </div>
 <div class="legend">
-  <span><i class="dot" style="background:#7c3aed"></i>AI (fuzzy — reads)</span>
-  <span><i class="dot" style="background:#059669"></i>Rules (exact — decide)</span>
+  <span><i class="dot" style="background:#7c3aed"></i>AI (fuzzy - reads)</span>
+  <span><i class="dot" style="background:#059669"></i>Rules (exact - decide)</span>
   <span><i class="dot" style="background:#2563eb"></i>Storage</span>
   <span><i class="dot" style="background:#be185d"></i>Queue</span>
   <span><i class="dot" style="background:#b45309"></i>Human</span>
@@ -232,10 +232,10 @@
 </div>
 </div>
 
-<div class="callout"><b>The one principle behind all of it:</b> AI runs only at the edge where data is messy (reading the PDF). The moment data is clean, deterministic rules take over — because money must be exact and auditable. <b>AI never decides what to pay.</b> And the ERP is the memory: every step either reads from it or writes to it.</div>
+<div class="callout"><b>The one principle behind all of it:</b> AI runs only at the edge where data is messy (reading the PDF). The moment data is clean, deterministic rules take over - because money must be exact and auditable. <b>AI never decides what to pay.</b> And the ERP is the memory: every step either reads from it or writes to it.</div>
 
 <!-- ============================================================ 3 -->
-<h2><span class="no">3.</span> Codebase #1 — miniERP <span class="tag t-erp">SYSTEM OF RECORD · :4000</span></h2>
+<h2><span class="no">3.</span> Codebase #1 - miniERP <span class="tag t-erp">SYSTEM OF RECORD · :4000</span></h2>
 <p class="lead">The trusted core. Stores financial truth, enforces the invoice lifecycle, knows nothing about AI. Backend + a single-file frontend in one deployable unit.</p>
 
 <pre class="tree">
@@ -245,25 +245,25 @@
 ├── <span class="d">prisma/</span>
 │   ├── <span class="hot">schema.prisma</span>       <span class="c">THE data model: Vendor, Customer, Invoice, Payment, PurchaseOrder</span>
 │   ├── seed.ts             <span class="c">sample data loader (Dell + invoice D123)</span>
-│   └── <span class="d">migrations/</span>         <span class="c">timestamped SQL history — how the tables were built</span>
-├── <span class="d">public/</span>                 <span class="c">the frontend — static files served by Express</span>
-│   ├── <span class="hot">index.html</span>          <span class="c">the whole ERP UI (teal design) — tabs, forms, tables, JS</span>
+│   └── <span class="d">migrations/</span>         <span class="c">timestamped SQL history - how the tables were built</span>
+├── <span class="d">public/</span>                 <span class="c">the frontend - static files served by Express</span>
+│   ├── <span class="hot">index.html</span>          <span class="c">the whole ERP UI (teal design) - tabs, forms, tables, JS</span>
 │   ├── architecture.html   <span class="c">saved diagram: 6-layer product architecture</span>
 │   ├── flow.html           <span class="c">saved diagram: hand-drawn ERP-touchpoint sketch</span>
 │   └── product-explainer.html <span class="c">saved diagram: shareable product explainer</span>
 └── <span class="d">src/</span>
-    ├── index.ts            <span class="c">entry point — starts the server on :4000</span>
+    ├── index.ts            <span class="c">entry point - starts the server on :4000</span>
     ├── <span class="hot">app.ts</span>              <span class="c">wires everything: static files, CORS, tenant check, routes</span>
     ├── <span class="d">config/</span>db.ts       <span class="c">the single shared Prisma client</span>
     ├── <span class="d">middleware/</span>
     │   ├── <span class="hot">tenant.ts</span>       <span class="c">MULTI-TENANCY: reads x-org-id header, rejects without it</span>
     │   └── errorHandler.ts <span class="c">every error → clean JSON (Zod 400s, AppError, 500s)</span>
     ├── <span class="d">utils/</span>asyncHandler.ts <span class="c">forwards async errors to the error handler</span>
-    └── <span class="d">modules/</span>            <span class="c">one folder per business concept — SAME 4-file pattern each:</span>
+    └── <span class="d">modules/</span>            <span class="c">one folder per business concept - SAME 4-file pattern each:</span>
         │                   <span class="c">routes (URLs) → schema (Zod validation) → controller (glue) → service (logic+DB)</span>
         ├── <span class="d">vendors/</span>        <span class="c">companies you buy from</span>
         ├── <span class="d">customers/</span>      <span class="c">companies you sell to</span>
-        ├── <span class="d">purchaseOrders/</span> <span class="c">what you ordered — POs to match invoices against</span>
+        ├── <span class="d">purchaseOrders/</span> <span class="c">what you ordered - POs to match invoices against</span>
         ├── <span class="d">invoices/</span>       <span class="c">★ the heart:</span>
         │   └── <span class="hot">invoice.service.ts</span> <span class="c">status STATE MACHINE (ALLOWED_TRANSITIONS) + duplicate</span>
         │                   <span class="c">guard + PO↔invoice amount MATCH (auto-sets PO to MATCHED)</span>
@@ -277,8 +277,8 @@
     └──────────────┴─→ REJECTED          <span class="c">illegal jumps (e.g. RECEIVED→PAID) are refused with a 400</span></pre>
 
 <!-- ============================================================ 4 -->
-<h2><span class="no">4.</span> Codebase #2 — finErpAP/server <span class="tag t-ai">THE PRODUCT · :5000</span></h2>
-<p class="lead">The automation pipeline. Its database stores <i>workflow</i> (documents, extractions, approvals, audit) — never financial truth. It reaches the ERP only through one adapter file.</p>
+<h2><span class="no">4.</span> Codebase #2 - finErpAP/server <span class="tag t-ai">THE PRODUCT · :5000</span></h2>
+<p class="lead">The automation pipeline. Its database stores <i>workflow</i> (documents, extractions, approvals, audit) - never financial truth. It reaches the ERP only through one adapter file.</p>
 
 <pre class="tree">
 <span class="d">finErpAP/</span>
@@ -289,32 +289,32 @@
     ├── .env                <span class="c">DATABASE_URL (finerp_ap) · PORT 5000 · ERP_BASE_URL · STORAGE_DIR ·</span>
     │                       <span class="c">ANTHROPIC_API_KEY (empty = mock AI) · VALKEY_HOST/PORT or VALKEY_URL</span>
     ├── <span class="d">prisma/</span><span class="hot">schema.prisma</span> <span class="c">IngestedDocument (status journey) · Extraction · ApprovalTask ·</span>
-    │                       <span class="c">WorkflowEvent (append-only audit) — all with organizationId</span>
+    │                       <span class="c">WorkflowEvent (append-only audit) - all with organizationId</span>
     ├── <span class="d">scripts/</span>makeSampleInvoice.ts <span class="c">generates demo vendor invoice PDFs (plays "Acer's email")</span>
     ├── <span class="d">samples/</span>            <span class="c">the generated PDFs land here</span>
     ├── <span class="d">storage/</span>            <span class="c">uploaded originals land here (S3 stand-in), keyed org/yyyy/mm/uuid.pdf</span>
     └── <span class="d">src/</span>
         ├── index.ts        <span class="c">boot: start queue FIRST, then the API</span>
-        ├── <span class="hot">app.ts</span>          <span class="c">★ INGESTION STARTS HERE — POST /api/documents/upload</span>
+        ├── <span class="hot">app.ts</span>          <span class="c">★ INGESTION STARTS HERE - POST /api/documents/upload</span>
         │                   <span class="c">also: GET /documents(+/:id) · GET /approvals · approve/reject · pay</span>
         ├── <span class="d">config/</span>env.ts + db.ts <span class="c">env vars in ONE place · shared Prisma client</span>
         ├── <span class="d">lib/</span>
-        │   ├── <span class="hot">storage.ts</span>  <span class="c">S3-style adapter: putObject/getObject — swap to real S3/R2 here ONLY</span>
-        │   └── hash.ts     <span class="c">sha256 fingerprint — duplicate defence #1 (before any AI cost)</span>
-        ├── <span class="d">extraction/</span>     <span class="c">★ THE AI LAYER — the only place AI exists</span>
+        │   ├── <span class="hot">storage.ts</span>  <span class="c">S3-style adapter: putObject/getObject - swap to real S3/R2 here ONLY</span>
+        │   └── hash.ts     <span class="c">sha256 fingerprint - duplicate defence #1 (before any AI cost)</span>
+        ├── <span class="d">extraction/</span>     <span class="c">★ THE AI LAYER - the only place AI exists</span>
         │   ├── extractor.ts       <span class="c">the contract both engines obey (ExtractedInvoice shape)</span>
         │   ├── pdfText.ts         <span class="c">PDF → raw text (pdfjs-dist; OCR would slot in here)</span>
-        │   ├── mockExtractor.ts   <span class="c">regex engine — offline, free, brittle on purpose</span>
-        │   ├── claudeExtractor.ts <span class="c">real AI — strict JSON out, treated as UNTRUSTED input</span>
+        │   ├── mockExtractor.ts   <span class="c">regex engine - offline, free, brittle on purpose</span>
+        │   ├── claudeExtractor.ts <span class="c">real AI - strict JSON out, treated as UNTRUSTED input</span>
         │   └── <span class="hot">index.ts</span>           <span class="c">the switch: key present → Claude, else mock. ONE line.</span>
-        ├── <span class="d">rules/</span>          <span class="c">★ THE RULE ENGINE — pure code, no AI imports allowed</span>
+        ├── <span class="d">rules/</span>          <span class="c">★ THE RULE ENGINE - pure code, no AI imports allowed</span>
         │   ├── <span class="hot">verify.ts</span>   <span class="c">5 ordered rules; #5 = the PO↔invoice amount MATCH</span>
         │   └── <span class="hot">route.ts</span>    <span class="c">thresholds: &lt;50k auto · 50k–5L FINANCE_HEAD · &gt;5L CFO</span>
         ├── <span class="d">pipeline/</span>       <span class="c">★ QUEUING STARTS HERE</span>
         │   ├── <span class="hot">queue.ts</span>    <span class="c">BullMQ on Valkey: enqueueDocument() + the Worker + retry policy</span>
-        │   └── <span class="hot">processDocument.ts</span> <span class="c">THE PIPELINE — one doc's whole journey:</span>
+        │   └── <span class="hot">processDocument.ts</span> <span class="c">THE PIPELINE - one doc's whole journey:</span>
         │                   <span class="c">idempotency guard → EXTRACT → VERIFY → ERP write → ROUTE; audits each step</span>
-        ├── <span class="d">erp/</span><span class="hot">erpClient.ts</span> <span class="c">★ ERP INTEGRATION — the ONLY file that talks to :4000.</span>
+        ├── <span class="d">erp/</span><span class="hot">erpClient.ts</span> <span class="c">★ ERP INTEGRATION - the ONLY file that talks to :4000.</span>
         │                   <span class="c">Swap this to QuickBooks/SAP later; pipeline never changes</span>
         └── <span class="d">audit/</span>audit.ts  <span class="c">append-only log: step + actor (SYSTEM/AI/RULE/HUMAN) + message</span>
 </pre>
@@ -322,22 +322,22 @@
 <h3>The document status journey (IngestedDocument.status)</h3>
 <pre class="tree">RECEIVED → QUEUED → EXTRACTING ──→ MATCHED ──→ PENDING_APPROVAL → APPROVED → PAID
                         │                │            │
-                        │                └─(&lt;50k)──→ APPROVED (auto — skips human)
+                        │                └─(&lt;50k)──→ APPROVED (auto - skips human)
                         │                             │
                         ├─→ NEEDS_REVIEW  <span class="c">(rule failed: mismatch / unknown vendor / no PO)</span>
                         ├─→ DUPLICATE     <span class="c">(same file hash OR same invoice no in ERP)</span>
                         └─→ FAILED        <span class="c">(crash after 3 queue retries)</span>          REJECTED <span class="c">(human said no)</span></pre>
 
 <!-- ============================================================ 5 -->
-<h2><span class="no">5.</span> Codebase #3 — finErpAP/web <span class="tag t-ui">DASHBOARD · :3000</span></h2>
-<p class="lead">Next.js 15 (App Router), hand-scaffolded, plain CSS. Deliberately contains <b>zero business logic</b> — it can only display and request; all rules live server-side.</p>
+<h2><span class="no">5.</span> Codebase #3 - finErpAP/web <span class="tag t-ui">DASHBOARD · :3000</span></h2>
+<p class="lead">Next.js 15 (App Router), hand-scaffolded, plain CSS. Deliberately contains <b>zero business logic</b> - it can only display and request; all rules live server-side.</p>
 
 <pre class="tree">
 <span class="d">finErpAP/web/</span>
 ├── package.json / tsconfig.json / next.config.mjs  <span class="c">Next.js 15 + React 19, nothing else</span>
-├── .env.example            <span class="c">NEXT_PUBLIC_API_URL — set on Vercel to the deployed backend</span>
+├── .env.example            <span class="c">NEXT_PUBLIC_API_URL - set on Vercel to the deployed backend</span>
 ├── <span class="d">lib/</span>
-│   └── <span class="hot">api.ts</span>              <span class="c">★ the dashboard's ONLY door to :5000 — types, calls, org header,</span>
+│   └── <span class="hot">api.ts</span>              <span class="c">★ the dashboard's ONLY door to :5000 - types, calls, org header,</span>
 │                           <span class="c">inr() formatter, timeAgo(). No fetch anywhere else.</span>
 ├── <span class="d">components/</span>OrgHeader.tsx <span class="c">top bar: brand, nav with active state, tenant switcher (localStorage)</span>
 └── <span class="d">app/</span>
@@ -349,10 +349,10 @@
 </pre>
 
 <!-- ============================================================ 6 -->
-<h2><span class="no">6.</span> "Where does X happen?" — the quick answers</h2>
+<h2><span class="no">6.</span> "Where does X happen?" - the quick answers</h2>
 <table>
 <tr><th>You asked "where…"</th><th>File</th><th>What to look for</th></tr>
-<tr><td><b>…ingestion starts</b></td><td><code>server/src/app.ts</code></td><td><code>POST /api/documents/upload</code> — store bytes → hash check → DB row → enqueue</td></tr>
+<tr><td><b>…ingestion starts</b></td><td><code>server/src/app.ts</code></td><td><code>POST /api/documents/upload</code> - store bytes → hash check → DB row → enqueue</td></tr>
 <tr><td><b>…queuing starts</b></td><td><code>server/src/pipeline/queue.ts</code></td><td><code>enqueueDocument()</code> drops the job into Valkey; the <code>Worker</code> at the bottom picks it up</td></tr>
 <tr><td><b>…the worker runs the pipeline</b></td><td><code>server/src/pipeline/processDocument.ts</code></td><td>read top-to-bottom: it IS the workflow drawing in code</td></tr>
 <tr><td><b>…the AI part lives</b></td><td><code>server/src/extraction/</code></td><td>engine switch in <code>index.ts</code>; real AI in <code>claudeExtractor.ts</code></td></tr>
@@ -360,7 +360,7 @@
 <tr><td><b>…approval routing decides</b></td><td><code>server/src/rules/route.ts</code></td><td>3 thresholds → AUTO / FINANCE_HEAD / CFO</td></tr>
 <tr><td><b>…the ERP is integrated</b></td><td><code>server/src/erp/erpClient.ts</code></td><td>every ERP call in one file; swap target ERP here only</td></tr>
 <tr><td><b>…the ERP enforces truth</b></td><td><code>miniERP/src/modules/invoices/invoice.service.ts</code></td><td><code>ALLOWED_TRANSITIONS</code> state machine + duplicate guard + PO match</td></tr>
-<tr><td><b>…payment is atomic</b></td><td><code>miniERP/src/modules/payments/payment.service.ts</code></td><td><code>prisma.$transaction</code> — payment + PAID + PO CLOSED together or not at all</td></tr>
+<tr><td><b>…payment is atomic</b></td><td><code>miniERP/src/modules/payments/payment.service.ts</code></td><td><code>prisma.$transaction</code> - payment + PAID + PO CLOSED together or not at all</td></tr>
 <tr><td><b>…every action is audited</b></td><td><code>server/src/audit/audit.ts</code></td><td>append-only; actor = SYSTEM / AI / RULE / HUMAN</td></tr>
 <tr><td><b>…multi-tenancy is enforced</b></td><td><code>miniERP/src/middleware/tenant.ts</code> + every service</td><td>x-org-id header → <code>organizationId</code> scoping every query</td></tr>
 <tr><td><b>…the UI gets its data</b></td><td><code>web/lib/api.ts</code></td><td>all fetches; pages only render what it returns</td></tr>
@@ -371,12 +371,12 @@
 <p class="lead">Print this section and follow each trace with the files open. This is the fastest way to truly own the codebase.</p>
 
 <div class="trace">
-<h4>Trace A — happy path (₹2,50,000 invoice, matches PO)</h4>
+<h4>Trace A - happy path (₹2,50,000 invoice, matches PO)</h4>
 <div class="tstep"><span class="tn">1</span><div>Upload hits <b>app.ts</b> → bytes stored via <b>storage.ts</b>, sha256 via <b>hash.ts</b>, row created (QUEUED), audit "INGEST" <span class="f">server/src/app.ts</span></div></div>
 <div class="tstep"><span class="tn">2</span><div><b>enqueueDocument()</b> writes the job into Valkey; HTTP returns 201 immediately <span class="f">pipeline/queue.ts</span></div></div>
 <div class="tstep"><span class="tn">3</span><div>Worker fires <b>processDocument()</b> → idempotency guard (status must be QUEUED) <span class="f">pipeline/processDocument.ts</span></div></div>
 <div class="tstep"><span class="tn">4</span><div>EXTRACT: <b>pdfText.ts</b> pulls text → engine from <b>extraction/index.ts</b> returns JSON → saved as Extraction row, audit "EXTRACT (AI)"</div></div>
-<div class="tstep"><span class="tn">5</span><div>VERIFY: <b>verify.ts</b> — fields ✓, vendor found via <b>erpClient.listVendors</b> ✓, PO found ✓, same vendor ✓, amounts equal ✓ → audit "VERIFY (RULE)"</div></div>
+<div class="tstep"><span class="tn">5</span><div>VERIFY: <b>verify.ts</b> - fields ✓, vendor found via <b>erpClient.listVendors</b> ✓, PO found ✓, same vendor ✓, amounts equal ✓ → audit "VERIFY (RULE)"</div></div>
 <div class="tstep"><span class="tn">6</span><div><b>erpClient.createInvoice()</b> → ERP's <b>invoice.service.ts</b> validates again (duplicate? vendor belongs to org? PO same vendor?) → creates invoice → auto-marks PO MATCHED</div></div>
 <div class="tstep"><span class="tn">7</span><div>ROUTE: <b>route.ts</b> → 2.5L is in 50k–5L band → ApprovalTask(FINANCE_HEAD) created → ERP invoice → PENDING_APPROVAL → audit "ROUTE (RULE)"</div></div>
 <div class="tstep"><span class="tn">8</span><div>Human clicks ✓ in <b>approvals/page.tsx</b> → <b>app.ts decideApproval()</b> → ERP first, then local records → audit "APPROVAL (HUMAN)"</div></div>
@@ -384,45 +384,45 @@
 </div>
 
 <div class="trace">
-<h4>Trace B — the exception (invoice ₹2,90,000 but PO says ₹3,00,000)</h4>
+<h4>Trace B - the exception (invoice ₹2,90,000 but PO says ₹3,00,000)</h4>
 <div class="tstep"><span class="tn">1</span><div>Steps 1–4 identical (ingest, queue, extract)</div></div>
 <div class="tstep"><span class="tn">2</span><div><b>verify.ts</b> rule 5: <code>Number(po.amount) !== extracted.amount</code> → returns <code>{ ok:false, reason:"Amount mismatch…" }</code></div></div>
-<div class="tstep"><span class="tn">3</span><div><b>processDocument.ts</b> sets status NEEDS_REVIEW + failReason, audits "VERIFY (RULE) FLAGGED", and <b>returns</b> — the pipeline stops. Nothing was written to the ERP. No money can move.</div></div>
+<div class="tstep"><span class="tn">3</span><div><b>processDocument.ts</b> sets status NEEDS_REVIEW + failReason, audits "VERIFY (RULE) FLAGGED", and <b>returns</b> - the pipeline stops. Nothing was written to the ERP. No money can move.</div></div>
 <div class="tstep"><span class="tn">4</span><div>Dashboard shows the red badge + 🚩 reason on the detail page. (Resolving it from the UI = a future feature.)</div></div>
 </div>
 
 <div class="trace">
-<h4>Trace C — the automation payoff (₹30,000 invoice, clean)</h4>
-<div class="tstep"><span class="tn">1</span><div>Steps 1–6 identical — extract, verify, ERP write, PO matched</div></div>
+<h4>Trace C - the automation payoff (₹30,000 invoice, clean)</h4>
+<div class="tstep"><span class="tn">1</span><div>Steps 1–6 identical - extract, verify, ERP write, PO matched</div></div>
 <div class="tstep"><span class="tn">2</span><div><b>route.ts</b>: 30,000 &lt; 50,000 → <code>{ kind:"AUTO_APPROVE" }</code></div></div>
-<div class="tstep"><span class="tn">3</span><div>ERP invoice set APPROVED directly; <b>no ApprovalTask is ever created</b> — the invoice never appears in any human's inbox. That's the product's whole value in one trace.</div></div>
+<div class="tstep"><span class="tn">3</span><div>ERP invoice set APPROVED directly; <b>no ApprovalTask is ever created</b> - the invoice never appears in any human's inbox. That's the product's whole value in one trace.</div></div>
 </div>
 
 <!-- ============================================================ 8 -->
-<h2><span class="no">8.</span> The two databases — and why they're separate</h2>
+<h2><span class="no">8.</span> The two databases - and why they're separate</h2>
 <table>
 <tr><th></th><th><code>mini_erp</code> (the ERP's)</th><th><code>finerp_ap</code> (the product's)</th></tr>
 <tr><td><b>Stores</b></td><td>financial TRUTH: Vendor, Customer, PurchaseOrder, Invoice, Payment</td><td>WORKFLOW: IngestedDocument, Extraction, ApprovalTask, WorkflowEvent (audit)</td></tr>
 <tr><td><b>Owner</b></td><td>miniERP only</td><td>pipeline only</td></tr>
-<tr><td><b>Why separate</b></td><td colspan="2">In reality the customer's ERP already exists (QuickBooks/SAP) — you'd never share its database. The product must treat the ERP as a foreign system reachable only by API. Merging them would build something that can't exist in production.</td></tr>
-<tr><td><b>Shared rule</b></td><td colspan="2">every table in BOTH has <code>organizationId</code> — multi-tenant from day one</td></tr>
+<tr><td><b>Why separate</b></td><td colspan="2">In reality the customer's ERP already exists (QuickBooks/SAP) - you'd never share its database. The product must treat the ERP as a foreign system reachable only by API. Merging them would build something that can't exist in production.</td></tr>
+<tr><td><b>Shared rule</b></td><td colspan="2">every table in BOTH has <code>organizationId</code> - multi-tenant from day one</td></tr>
 </table>
 
 <!-- ============================================================ 9 -->
-<h2><span class="no">9.</span> What's NOT built yet — and exactly where it will go</h2>
+<h2><span class="no">9.</span> What's NOT built yet - and exactly where it will go</h2>
 <table>
 <tr><th>Future feature</th><th>Where it slots in</th><th>Blast radius</th></tr>
-<tr><td><b>Real AI extraction</b> <span class="tag t-future">NEXT</span></td><td>put key in <code>server/.env</code> → <code>ANTHROPIC_API_KEY</code></td><td>zero code changes — <code>extraction/index.ts</code> switches automatically</td></tr>
-<tr><td><b>Gmail email ingestion</b> <span class="tag t-future">NEXT</span></td><td>new <code>server/src/ingest/gmail.ts</code> — polls inbox, downloads PDF attachments, calls the same ingest logic as upload</td><td>one new file + a small refactor to share the ingest function; pipeline untouched</td></tr>
+<tr><td><b>Real AI extraction</b> <span class="tag t-future">NEXT</span></td><td>put key in <code>server/.env</code> → <code>ANTHROPIC_API_KEY</code></td><td>zero code changes - <code>extraction/index.ts</code> switches automatically</td></tr>
+<tr><td><b>Gmail email ingestion</b> <span class="tag t-future">NEXT</span></td><td>new <code>server/src/ingest/gmail.ts</code> - polls inbox, downloads PDF attachments, calls the same ingest logic as upload</td><td>one new file + a small refactor to share the ingest function; pipeline untouched</td></tr>
 <tr><td>Needs-review resolution</td><td>new endpoint in <code>app.ts</code> (edit extraction → requeue) + a form on the detail page</td><td>small; pipeline reuses existing steps</td></tr>
 <tr><td>Real S3 / Cloudflare R2</td><td>internals of <code>lib/storage.ts</code> only</td><td>~20 lines; nothing else knows</td></tr>
 <tr><td>Other ERPs (QuickBooks/SAP)</td><td>a second <code>erp/quickbooksClient.ts</code> with the same function names</td><td>one file; pipeline untouched</td></tr>
 <tr><td>Per-company approval rules</td><td><code>rules/route.ts</code> reads thresholds from a DB table instead of constants</td><td>small + a settings UI later</td></tr>
 <tr><td>Login / real auth</td><td>replace the x-org-id header with sessions/JWT in both middlewares</td><td>medium; isolated to middleware</td></tr>
-<tr><td>AR side (collections, reminders)</td><td>new pipeline steps + AR agent — mirrors everything you already know</td><td>new module, same patterns</td></tr>
+<tr><td>AR side (collections, reminders)</td><td>new pipeline steps + AR agent - mirrors everything you already know</td><td>new module, same patterns</td></tr>
 </table>
 
-<div class="callout" style="margin-top:26px"><b>How to study this codebase (suggested order):</b> ① miniERP <code>invoice.service.ts</code> (state machine) → ② <code>processDocument.ts</code> (the whole story) → ③ <code>verify.ts</code> + <code>route.ts</code> (the guards) → ④ <code>queue.ts</code> (reliability) → ⑤ <code>erpClient.ts</code> (the seam) → ⑥ <code>web/lib/api.ts</code> → <code>page.tsx</code> (how the UI consumes it). Follow the three traces in section 7 with the files open — that's when it clicks.</div>
+<div class="callout" style="margin-top:26px"><b>How to study this codebase (suggested order):</b> ① miniERP <code>invoice.service.ts</code> (state machine) → ② <code>processDocument.ts</code> (the whole story) → ③ <code>verify.ts</code> + <code>route.ts</code> (the guards) → ④ <code>queue.ts</code> (reliability) → ⑤ <code>erpClient.ts</code> (the seam) → ⑥ <code>web/lib/api.ts</code> → <code>page.tsx</code> (how the UI consumes it). Follow the three traces in section 7 with the files open - that's when it clicks.</div>
 
 </div>
 </body>

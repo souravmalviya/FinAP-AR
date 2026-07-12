@@ -4,7 +4,7 @@ import { env } from "../config/env.js";
 import { processDocument } from "./processDocument.js";
 
 // ----------------------------------------------------------------------------
-//  The job queue — now BullMQ backed by Valkey (the open-source Redis fork).
+//  The job queue - now BullMQ backed by Valkey (the open-source Redis fork).
 //
 //  Why a queue at all? Extraction + ERP calls can fail halfway (ERP down,
 //  network blip, AI timeout). A queued job:
@@ -19,7 +19,7 @@ export const QUEUE_NAME = "process-document";
 
 // BullMQ takes a connection config; Valkey speaks the Redis protocol.
 // Locally we use host/port (docker compose). In the cloud, VALKEY_URL carries
-// the full connection string incl. password/TLS — one env var, no code change.
+// the full connection string incl. password/TLS - one env var, no code change.
 // maxRetriesPerRequest:null = BullMQ requirement (workers wait forever).
 const connection = env.VALKEY_URL
   ? new IORedis(env.VALKEY_URL, { maxRetriesPerRequest: null })
@@ -47,7 +47,7 @@ export async function startQueue(): Promise<void> {
 
   worker.on("failed", async (job, err) => {
     console.error(`[queue] job ${job?.id} attempt ${job?.attemptsMade} failed: ${err.message}`);
-    // Out of retries? Then the document is truly FAILED — don't leave it
+    // Out of retries? Then the document is truly FAILED - don't leave it
     // looking QUEUED forever. (processDocument resets to QUEUED between
     // attempts so retries are allowed to run; this is the final word.)
     if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
@@ -67,7 +67,7 @@ export async function startQueue(): Promise<void> {
 }
 
 // Enqueue a document for processing. Retries: 3 attempts with exponential
-// backoff (5s, 10s, 20s) — same policy we had under pg-boss.
+// backoff (5s, 10s, 20s) - same policy we had under pg-boss.
 export async function enqueueDocument(documentId: string): Promise<void> {
   if (!queue) throw new Error("Queue not started");
   await queue.add(

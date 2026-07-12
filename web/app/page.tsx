@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DocumentRow, getUser, inr, listDocuments, timeAgo, uploadDocument } from "@/lib/api";
 
 // ----------------------------------------------------------------------------
-//  Documents — mission control. Polls every 3s so you watch invoices move:
+//  Documents - mission control. Polls every 3s so you watch invoices move:
 //  QUEUED -> EXTRACTING -> MATCHED -> PENDING_APPROVAL -> APPROVED -> PAID
 // ----------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ export default function DocumentsPage() {
   const [canUpload, setCanUpload] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // EMPLOYEE is view-only — hide the upload zone (server enforces it anyway).
+  // EMPLOYEE is view-only - hide the upload zone (server enforces it anyway).
   useEffect(() => {
     const u = getUser();
     setCanUpload(!!u && u.role !== "EMPLOYEE");
@@ -62,7 +62,7 @@ export default function DocumentsPage() {
     setBusy(true);
     try {
       await uploadDocument(file);
-      notify(`"${file.name}" ingested — watch it move ↓`, true);
+      notify(`"${file.name}" ingested - watch it move ↓`, true);
       if (fileRef.current) fileRef.current.value = "";
       refresh();
     } catch (e) {
@@ -98,7 +98,7 @@ export default function DocumentsPage() {
         <div className="icon">📥</div>
         <div className="txt">
           <b>Simulate an incoming invoice</b>
-          <span>Drag a PDF here, or browse — this plays the role of the vendor&apos;s email</span>
+          <span>Drag a PDF here, or browse - this plays the role of the vendor&apos;s email</span>
         </div>
         <input type="file" accept="application/pdf" ref={fileRef} onChange={(e) => ingest(e.target.files?.[0])} />
         <button className="btn" onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -133,15 +133,15 @@ export default function DocumentsPage() {
               ))}
             {docs !== null && shown.length === 0 && (
               <tr><td colSpan={7} className="empty">
-                {filter === "ALL" ? "Nothing yet — upload an invoice PDF above." : "No documents match this filter."}
+                {filter === "ALL" ? "Nothing yet - upload an invoice PDF above." : "No documents match this filter."}
               </td></tr>
             )}
             {shown.map((d) => (
               <tr key={d.id} className="rowlink" onClick={() => router.push(`/documents/${d.id}`)}>
                 <td className="filecell">{d.fileName}</td>
-                <td>{d.extraction?.vendorName ?? "—"}</td>
-                <td className="mono">{d.extraction?.invoiceNo ?? "—"}</td>
-                <td className="mono">{d.extraction?.poNumber ?? "—"}</td>
+                <td>{d.extraction?.vendorName ?? "-"}</td>
+                <td className="mono">{d.extraction?.invoiceNo ?? "-"}</td>
+                <td className="mono">{d.extraction?.poNumber ?? "-"}</td>
                 <td>{inr(d.extraction?.amount)}</td>
                 <td><span className={`badge s-${d.status}`}>{d.status.replace(/_/g, " ")}</span></td>
                 <td className="dim">{timeAgo(d.createdAt)}</td>

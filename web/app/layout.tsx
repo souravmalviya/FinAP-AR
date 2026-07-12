@@ -3,7 +3,7 @@ import "./globals.css";
 import OrgHeader from "@/components/OrgHeader";
 
 export const metadata: Metadata = {
-  title: "Verity — AP Automation",
+  title: "Verity | AP Automation",
   description: "Every invoice, verified.",
 };
 

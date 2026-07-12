@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/auth/auth.js";
 
 // Creates the demo team for org_demo. Run with: npx tsx scripts/seedUsers.ts
-// All demo passwords are "demo1234" — CHANGE for anything public.
+// All demo passwords are "demo1234" - CHANGE for anything public.
 const prisma = new PrismaClient();
 
 const ORG = "org_demo";

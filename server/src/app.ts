@@ -22,7 +22,7 @@ import * as erp from "./erp/erpClient.js";
 export const app = express();
 app.use(express.json());
 
-// CORS — the Next.js dashboard (localhost:3000) will call this API.
+// CORS - the Next.js dashboard (localhost:3000) will call this API.
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -33,10 +33,10 @@ app.use((req, res, next) => {
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "finerp-ap" }));
 
-// ---- AUTH (public routes — the only /api paths that work without a token) ----
+// ---- AUTH (public routes - the only /api paths that work without a token) ----
 
 // Roles a person may pick for themselves at sign-up.
-// (Self-pick of powerful roles is a demo convenience — in production this
+// (Self-pick of powerful roles is a demo convenience - in production this
 // list shrinks to ["EMPLOYEE"] and finance roles come via admin invitation.)
 const SELF_SERVE_ROLES: UserRole[] = ["EMPLOYEE", "AP_CLERK", "FINANCE_HEAD", "CFO", "ADMIN"];
 
@@ -75,7 +75,7 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: "email and password required" });
 
   const user = await prisma.user.findUnique({ where: { email } });
-  // Same error for "no such user" and "wrong password" — never help attackers
+  // Same error for "no such user" and "wrong password" - never help attackers
   // figure out which emails exist.
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ error: "Invalid email or password" });
@@ -88,7 +88,7 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
 }));
 
 // Everything below requires a valid login token. The user's organizationId
-// becomes the tenant — no more spoofable x-org-id header.
+// becomes the tenant - no more spoofable x-org-id header.
 app.use("/api", requireAuth);
 
 app.get("/api/auth/me", (req, res) => res.json((req as any).user));
@@ -97,7 +97,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 // ---- INGEST: the front door of the whole pipeline ---------------------------
 // The actual ingest logic lives in ingest/ingestFile.ts, shared with the
-// Gmail poller — every source goes through the same door.
+// Gmail poller - every source goes through the same door.
 // EMPLOYEE is view-only, so uploading requires a working role.
 app.post("/api/documents/upload", requireRole("AP_CLERK", "FINANCE_HEAD", "CFO", "ADMIN"), upload.single("file"), async (req, res) => {
   try {
@@ -108,7 +108,7 @@ app.post("/api/documents/upload", requireRole("AP_CLERK", "FINANCE_HEAD", "CFO",
 
     if (result.duplicate) {
       return res.status(409).json({
-        error: "Duplicate file — this exact PDF was already ingested",
+        error: "Duplicate file - this exact PDF was already ingested",
         documentId: result.documentId,
         status: result.status,
       });
@@ -159,7 +159,7 @@ app.get("/api/approvals", asyncHandler(async (req, res) => {
 async function decideApproval(req: Request, res: Response, decision: "APPROVED" | "REJECTED") {
   const orgId = (req as any).orgId as string;
   const user = (req as any).user as AuthUser;
-  // The audit log records the REAL logged-in person — not a typed-in name.
+  // The audit log records the REAL logged-in person - not a typed-in name.
   const decidedBy = `${user.name} (${user.role})`;
 
   const task = await prisma.approvalTask.findFirst({
@@ -170,14 +170,14 @@ async function decideApproval(req: Request, res: Response, decision: "APPROVED" 
   if (!task.document.erpInvoiceId)
     return res.status(500).json({ error: "Document has no linked ERP invoice" });
 
-  // AUTHORIZATION — the designated-person rule:
+  // AUTHORIZATION - the designated-person rule:
   //   FINANCE_HEAD may decide FINANCE_HEAD tasks only.
   //   CFO outranks: may decide any task. ADMIN likewise.
   //   Everyone else (AP_CLERK): never.
   const outranks = user.role === "CFO" || user.role === "ADMIN";
   if (!outranks && user.role !== task.requiredRole) {
     return res.status(403).json({
-      error: `This invoice requires ${task.requiredRole} approval — your role is ${user.role}`,
+      error: `This invoice requires ${task.requiredRole} approval - your role is ${user.role}`,
     });
   }
 
@@ -185,7 +185,7 @@ async function decideApproval(req: Request, res: Response, decision: "APPROVED" 
   try {
     await erp.setInvoiceStatus(orgId, task.document.erpInvoiceId, decision);
   } catch (e) {
-    // The ERP refused the transition — almost always because someone decided
+    // The ERP refused the transition - almost always because someone decided
     // this invoice DIRECTLY in the ERP UI. The ERP is the system of record,
     // so we don't fight it: read its actual state, sync ourselves to it,
     // and tell the user what happened.
@@ -206,9 +206,9 @@ async function decideApproval(req: Request, res: Response, decision: "APPROVED" 
           data: { status: syncedStatus },
         });
         await audit(orgId, task.documentId, "APPROVAL", "SYSTEM",
-          `Conflict: this invoice was already ${actual.status} directly in the ERP — product records synced to match`);
+          `Conflict: this invoice was already ${actual.status} directly in the ERP - product records synced to match`);
         return res.status(409).json({
-          error: `Already ${actual.status} directly in the ERP — records are now synced. Refresh to see the current state.`,
+          error: `Already ${actual.status} directly in the ERP - records are now synced. Refresh to see the current state.`,
         });
       }
     }
@@ -260,13 +260,13 @@ app.post("/api/documents/:id/pay", requireRole("FINANCE_HEAD", "CFO", "ADMIN"), 
   res.json({ ok: true });
 }));
 
-// ---- CENTRAL ERROR HANDLER — must be registered LAST -------------------------
+// ---- CENTRAL ERROR HANDLER - must be registered LAST -------------------------
 // Any error thrown in any route lands here and becomes a clean JSON response.
 // Without this, one rejected promise would kill the whole process (Node 15+).
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof erp.ErpError) {
-    // The system of record said no — pass its reason through honestly.
+    // The system of record said no - pass its reason through honestly.
     return res.status(err.status === 400 ? 409 : err.status).json({ error: `ERP: ${err.message}` });
   }
   console.error("Unexpected error:", err);

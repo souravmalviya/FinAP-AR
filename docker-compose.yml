@@ -2,7 +2,7 @@
 #
 # Valkey = the open-source, Linux Foundation fork of Redis (BSD licensed).
 # BullMQ (our job queue library) speaks the Redis protocol, so it works with
-# Valkey unchanged. Jobs live here — they survive app restarts.
+# Valkey unchanged. Jobs live here - they survive app restarts.
 services:
   valkey:
     image: valkey/valkey:8-alpine

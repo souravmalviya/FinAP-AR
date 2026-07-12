@@ -1,9 +1,9 @@
 // ============================================================================
-//  finErpAP — the AP automation product's OWN database
+//  finErpAP - the AP automation product's OWN database
 // ----------------------------------------------------------------------------
 //  IMPORTANT ARCHITECTURE RULE:
 //  This DB stores the *workflow* (documents, extractions, approvals, audit).
-//  It NEVER stores financial truth — that lives in the ERP (Mini-ERP, :4000).
+//  It NEVER stores financial truth - that lives in the ERP (Mini-ERP, :4000).
 //  The pipeline reads/writes the ERP only through its REST API.
 // ============================================================================
 
@@ -80,7 +80,7 @@ model Extraction {
   poNumber   String? // "PO Ref" printed on the invoice, used for matching
   amount     Decimal? @db.Decimal(14, 2)
   dueDate    DateTime?
-  engine     ExtractEngine // MOCK or CLAUDE — always recorded for audit
+  engine     ExtractEngine // MOCK or CLAUDE - always recorded for audit
 
   createdAt DateTime @default(now())
 }
@@ -110,7 +110,7 @@ model WorkflowEvent {
   document       IngestedDocument @relation(fields: [documentId], references: [id])
 
   step    String // e.g. "EXTRACT", "VERIFY", "ROUTE", "APPROVE", "PAY"
-  actor   Actor // SYSTEM | AI | RULE | HUMAN — *who* decided
+  actor   Actor // SYSTEM | AI | RULE | HUMAN - *who* decided
   message String // human-readable summary shown in the UI timeline
   data    Json? // structured detail (amounts compared, rule fired, etc.)
 

@@ -1,8 +1,8 @@
 // Digital PDFs carry their text inside the file. We pull it out with
-// pdfjs-dist — Mozilla's PDF engine (the same one Firefox uses to render
+// pdfjs-dist - Mozilla's PDF engine (the same one Firefox uses to render
 // PDFs). Actively maintained, handles real-world files.
 //
-// (Scanned/photographed invoices have no embedded text and would need OCR —
+// (Scanned/photographed invoices have no embedded text and would need OCR -
 // e.g. AWS Textract. That alternative path would slot in right here.)
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 

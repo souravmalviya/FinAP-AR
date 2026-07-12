@@ -7,7 +7,7 @@ import { enqueueDocument } from "../pipeline/queue.js";
 import { audit } from "../audit/audit.js";
 
 // ----------------------------------------------------------------------------
-//  THE one front door for invoices — no matter how they arrive.
+//  THE one front door for invoices - no matter how they arrive.
 //
 //  The upload endpoint calls this. The Gmail poller calls this. A future
 //  WhatsApp/Slack/API integration would call this too. One door means the

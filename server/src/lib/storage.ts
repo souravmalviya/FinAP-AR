@@ -5,14 +5,14 @@ import { env } from "../config/env.js";
 // ----------------------------------------------------------------------------
 //  S3-style storage adapter (Layer 2 of the architecture: CAPTURE).
 //
-//  The rest of the app only ever calls putObject/getObject with a KEY —
+//  The rest of the app only ever calls putObject/getObject with a KEY -
 //  exactly like AWS S3. Today the bytes land in a local folder; the day we
 //  move to real S3, we swap the internals of these two functions and NOTHING
 //  else in the codebase changes. That is what "adapter" means.
 // ----------------------------------------------------------------------------
 
 function fullPath(key: string) {
-  // keys look like "org_demo/2026/07/uuid.pdf" — recreate that as folders
+  // keys look like "org_demo/2026/07/uuid.pdf" - recreate that as folders
   return path.join(env.STORAGE_DIR, key);
 }
 

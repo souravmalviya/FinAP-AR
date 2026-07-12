@@ -2,7 +2,7 @@ import { ExtractedInvoice, Extractor } from "./extractor.js";
 
 // ----------------------------------------------------------------------------
 //  MOCK engine: parses invoices with labelled lines using regex.
-//  Works offline, costs nothing — perfect for local dev and demos.
+//  Works offline, costs nothing - perfect for local dev and demos.
 //
 //  It expects lines like:
 //     Vendor: Acer India Pvt Ltd

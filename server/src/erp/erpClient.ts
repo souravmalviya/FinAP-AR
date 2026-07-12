@@ -1,13 +1,13 @@
 import { env } from "../config/env.js";
 
 // ----------------------------------------------------------------------------
-//  ERP client — the ONLY file that knows how to talk to the ERP.
+//  ERP client - the ONLY file that knows how to talk to the ERP.
 //
 //  Today it targets your Mini-ERP's REST API (localhost:4000).
 //  To support QuickBooks/SAP later, you write another client with these same
 //  function names and swap it in. The pipeline never changes.
 //
-//  Every call carries x-org-id — the ERP's multi-tenant rule.
+//  Every call carries x-org-id - the ERP's multi-tenant rule.
 // ----------------------------------------------------------------------------
 
 export class ErpError extends Error {

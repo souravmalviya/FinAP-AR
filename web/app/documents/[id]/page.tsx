@@ -6,7 +6,7 @@ import Link from "next/link";
 import { DocumentRow, getDocument, inr, payDocument } from "@/lib/api";
 
 // ----------------------------------------------------------------------------
-//  Document detail — what the AI read, where the document is now, and the
+//  Document detail - what the AI read, where the document is now, and the
 //  full audit timeline (who did what: SYSTEM / AI / RULE / HUMAN).
 //  This page is the answer to the auditor's question: "prove it."
 // ----------------------------------------------------------------------------
@@ -73,11 +73,11 @@ export default function DocumentDetailPage() {
           <h3>What the {x && x.engine !== "MOCK" ? "AI" : "extractor"} read</h3>
           {x ? (
             <div className="kv">
-              <span className="k">Vendor</span><span className="v">{x.vendorName ?? "—"}</span>
-              <span className="k">Invoice #</span><span className="v mono">{x.invoiceNo ?? "—"}</span>
-              <span className="k">PO Ref</span><span className="v mono">{x.poNumber ?? "—"}</span>
+              <span className="k">Vendor</span><span className="v">{x.vendorName ?? "-"}</span>
+              <span className="k">Invoice #</span><span className="v mono">{x.invoiceNo ?? "-"}</span>
+              <span className="k">PO Ref</span><span className="v mono">{x.poNumber ?? "-"}</span>
               <span className="k">Amount</span><span className="v" style={{ fontWeight: 700 }}>{inr(x.amount)}</span>
-              <span className="k">Due date</span><span className="v">{x.dueDate ? new Date(x.dueDate).toLocaleDateString() : "—"}</span>
+              <span className="k">Due date</span><span className="v">{x.dueDate ? new Date(x.dueDate).toLocaleDateString() : "-"}</span>
               <span className="k">Engine</span><span className="v"><span className={`actor ${x.engine !== "MOCK" ? "a-AI" : "a-SYSTEM"}`}>{x.engine}</span></span>
               <span className="k">ERP invoice</span><span className="v mono">{doc.erpInvoiceId ? doc.erpInvoiceId.slice(0, 8) + "…" : "not created"}</span>
             </div>

@@ -1,4 +1,4 @@
-// The Verity mark: a V drawn as a checkmark — truth and verification in one
+// The Verity mark: a V drawn as a checkmark - truth and verification in one
 // stroke. Used in the top bar, login, and register pages (favicon lives in
 // app/icon.svg with the same artwork).
 export default function Logo({ size = 30 }: { size?: number }) {

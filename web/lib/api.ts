@@ -1,12 +1,12 @@
 // ----------------------------------------------------------------------------
-//  API client — the dashboard's single door to the pipeline (:5000).
+//  API client - the dashboard's single door to the pipeline (:5000).
 //  Every request carries the login token (Authorization: Bearer ...).
-//  The tenant is derived server-side from the logged-in user — the frontend
+//  The tenant is derived server-side from the logged-in user - the frontend
 //  cannot spoof it.
 // ----------------------------------------------------------------------------
 
 // Locally this falls back to the dev pipeline. In production (e.g. Vercel),
-// set NEXT_PUBLIC_API_URL to the deployed backend (e.g. Railway URL) —
+// set NEXT_PUBLIC_API_URL to the deployed backend (e.g. Railway URL) -
 // NEXT_PUBLIC_* vars are baked into the browser bundle at build time.
 const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api";
@@ -148,7 +148,7 @@ export function uploadDocument(file: File) {
   });
 }
 
-// decidedBy now comes from the logged-in user server-side — nothing to send.
+// decidedBy now comes from the logged-in user server-side - nothing to send.
 export const approveTask = (id: string) =>
   api(`/approvals/${id}/approve`, { method: "POST", body: JSON.stringify({}) });
 
@@ -161,7 +161,7 @@ export const payDocument = (id: string) =>
 // --- Small helpers ----------------------------------------------------------------
 
 export const inr = (v: string | number | null | undefined) =>
-  v == null ? "—" : "₹" + Number(v).toLocaleString("en-IN");
+  v == null ? "-" : "₹" + Number(v).toLocaleString("en-IN");
 
 // "2m ago" style timestamps for tables.
 export function timeAgo(iso: string): string {

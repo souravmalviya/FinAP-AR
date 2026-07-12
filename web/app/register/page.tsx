@@ -8,13 +8,13 @@ import Logo from "@/components/Logo";
 
 // Self-service sign-up with a designation dropdown. The chosen role decides
 // what the server will allow (EMPLOYEE = view-only). Registering logs you in
-// immediately — no separate sign-in step.
+// immediately - no separate sign-in step.
 const DESIGNATIONS = [
   { value: "EMPLOYEE", label: "Employee", hint: "view-only access" },
   { value: "AP_CLERK", label: "AP Clerk", hint: "uploads & tracks invoices" },
   { value: "FINANCE_HEAD", label: "Finance Head", hint: "approves ₹50k–5L invoices" },
   { value: "CFO", label: "CFO", hint: "approves any invoice" },
-  { value: "ADMIN", label: "Admin", hint: "full access — everything the CFO can do, plus administration" },
+  { value: "ADMIN", label: "Admin", hint: "full access - everything the CFO can do, plus administration" },
 ];
 
 const inputStyle: React.CSSProperties = {
