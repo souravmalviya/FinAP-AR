@@ -1,0 +1,18 @@
+# --- dependencies & build output (nested .gitignores also cover these) ---
+node_modules/
+dist/
+.next/
+
+# --- secrets: NEVER commit env files (API keys, passwords) ---
+.env
+.env.*
+!.env.example
+
+# --- runtime data (uploaded PDFs, generated demo invoices) ---
+storage/
+samples/
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+*.log
