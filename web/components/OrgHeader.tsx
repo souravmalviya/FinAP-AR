@@ -40,6 +40,7 @@ export default function OrgHeader() {
       </nav>
       {user && (
         <div className="org">
+          {user.organizationName && <span className="orgname">{user.organizationName}</span>}
           <span className="whoami">
             <b>{user.name}</b>
             <i className={`rolechip r-${user.role}`}>{user.role.replace(/_/g, " ")}</i>

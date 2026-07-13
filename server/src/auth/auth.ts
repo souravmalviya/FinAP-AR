@@ -17,6 +17,7 @@ import { env } from "../config/env.js";
 export interface AuthUser {
   id: string;
   organizationId: string;
+  organizationName: string; // shown in the top bar; carried in the JWT
   name: string;
   role: UserRole;
 }

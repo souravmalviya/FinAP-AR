@@ -16,6 +16,7 @@ const API_BASE =
 export interface SessionUser {
   id: string;
   organizationId: string;
+  organizationName?: string; // optional: older tokens issued before orgs existed lack it
   name: string;
   role: "ADMIN" | "AP_CLERK" | "FINANCE_HEAD" | "CFO" | "EMPLOYEE";
 }
@@ -48,12 +49,13 @@ export async function register(
   name: string,
   email: string,
   password: string,
-  role: string
+  role: string,
+  organizationName: string
 ): Promise<SessionUser> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password, role }),
+    body: JSON.stringify({ name, email, password, role, organizationName }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as any).error || "Registration failed");

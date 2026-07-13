@@ -31,6 +31,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("EMPLOYEE");
+  const [organizationName, setOrganizationName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +40,7 @@ export default function RegisterPage() {
     setBusy(true);
     setError(null);
     try {
-      await register(name, email, password, role);
+      await register(name, email, password, role, organizationName);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -64,6 +65,14 @@ export default function RegisterPage() {
         <p className="sub">Join your team&apos;s Verity workspace</p>
 
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Organization name</label>
+            <input required value={organizationName} onChange={(e) => setOrganizationName(e.target.value)}
+              placeholder="Pine Labs" style={inputStyle} />
+            <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 3 }}>
+              New name creates the organization; an existing name joins it.
+            </div>
+          </div>
           <div>
             <label style={labelStyle}>Full name</label>
             <input required value={name} onChange={(e) => setName(e.target.value)}

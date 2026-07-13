@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import multer from "multer";
+import { env } from "./config/env.js";
 import { prisma } from "./config/db.js";
 import { ingestFile } from "./ingest/ingestFile.js";
 import { audit } from "./audit/audit.js";
@@ -45,9 +46,10 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
   const email = String(req.body?.email ?? "").trim().toLowerCase();
   const password = String(req.body?.password ?? "").trim();
   const role = String(req.body?.role ?? "") as UserRole;
+  const organizationName = String(req.body?.organizationName ?? "").trim();
 
-  if (!name || !email || !password)
-    return res.status(400).json({ error: "name, email and password are required" });
+  if (!name || !email || !password || !organizationName)
+    return res.status(400).json({ error: "name, email, password and organization name are required" });
   if (password.length < 8)
     return res.status(400).json({ error: "Password must be at least 8 characters" });
   if (!SELF_SERVE_ROLES.includes(role))
@@ -56,13 +58,26 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return res.status(409).json({ error: "An account with this email already exists" });
 
+  // The organization is a REAL entity now. First registrant with a new name
+  // CREATES the organization; later registrants with the same name JOIN it.
+  // (Production would gate joining behind an admin invitation - demo keeps it open.)
+  let org = await prisma.organization.findUnique({ where: { name: organizationName } });
+  if (!org) {
+    // erpCompany = the tenant tag this org's data carries INSIDE the ERP.
+    // For the miniERP that's the x-org-id value; a readable slug of the name.
+    const erpCompany = organizationName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    org = await prisma.organization.create({
+      data: { name: organizationName, erpType: "minierp", erpBaseUrl: env.ERP_BASE_URL, erpCompany },
+    });
+  }
+
   const user = await prisma.user.create({
-    data: { organizationId: "org_demo", name, email, role, passwordHash: hashPassword(password) },
+    data: { organizationId: org.id, name, email, role, passwordHash: hashPassword(password) },
   });
 
   // Register = logged in immediately (no second step).
   const authUser: AuthUser = {
-    id: user.id, organizationId: user.organizationId, name: user.name, role: user.role,
+    id: user.id, organizationId: org.id, organizationName: org.name, name: user.name, role: user.role,
   };
   res.status(201).json({ token: signToken(authUser), user: authUser });
 }));
@@ -74,7 +89,7 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
   const password = String(req.body?.password ?? "").trim();
   if (!email || !password) return res.status(400).json({ error: "email and password required" });
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { organization: true } });
   // Same error for "no such user" and "wrong password" - never help attackers
   // figure out which emails exist.
   if (!user || !verifyPassword(password, user.passwordHash)) {
@@ -82,7 +97,8 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
   }
 
   const authUser: AuthUser = {
-    id: user.id, organizationId: user.organizationId, name: user.name, role: user.role,
+    id: user.id, organizationId: user.organizationId, organizationName: user.organization.name,
+    name: user.name, role: user.role,
   };
   res.json({ token: signToken(authUser), user: authUser });
 }));

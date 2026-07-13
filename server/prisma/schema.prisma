@@ -16,19 +16,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// A real, first-class organization (tenant). This is THE fix for the fragile
+// "shared org string": the org is now a validated entity, and - crucially -
+// the row stores HOW TO REACH THIS ORG'S ERP. Swapping the miniERP for
+// ERPNext/QuickBooks later = storing different values here, per organization.
+model Organization {
+  id           String   @id @default(uuid())
+  name         String   @unique // "Pine Labs" - shown in the top bar
+  erpType      String   @default("minierp") // later: "erpnext", "quickbooks"...
+  erpBaseUrl   String   @default("http://localhost:4000")
+  erpCompany   String // the tenant identifier THE ERP uses (x-org-id for minierp)
+  erpApiKey    String? // credentials for real ERPs (ERPNext token etc.)
+  erpApiSecret String?
+  createdAt    DateTime @default(now())
+
+  users User[]
+}
+
 // A person who can log into the dashboard. The role decides what they may do:
 //   AP_CLERK     -> upload & watch documents, no approvals
 //   FINANCE_HEAD -> approve invoices in their band (50k–5L) + pay
 //   CFO          -> approve anything + pay
 //   ADMIN        -> everything (org owner)
 model User {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
-  email          String   @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  email          String       @unique
   name           String
   passwordHash   String
   role           UserRole
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([organizationId])
 }

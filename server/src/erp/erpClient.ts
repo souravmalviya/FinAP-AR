@@ -1,13 +1,14 @@
-import { env } from "../config/env.js";
+import { prisma } from "../config/db.js";
 
 // ----------------------------------------------------------------------------
 //  ERP client - the ONLY file that knows how to talk to the ERP.
 //
-//  Today it targets your Mini-ERP's REST API (localhost:4000).
-//  To support QuickBooks/SAP later, you write another client with these same
-//  function names and swap it in. The pipeline never changes.
-//
-//  Every call carries x-org-id - the ERP's multi-tenant rule.
+//  ORG-AWARE since the Organization entity landed: each organization's row in
+//  Verity's DB says WHICH ERP it uses (erpType), WHERE it lives (erpBaseUrl),
+//  and WHAT the org is called inside that ERP (erpCompany). This function
+//  looks that up and dials accordingly - so different orgs can use different
+//  ERPs, and swapping the miniERP for ERPNext is a config change plus one new
+//  adapter branch, never a pipeline change.
 // ----------------------------------------------------------------------------
 
 export class ErpError extends Error {
@@ -16,17 +17,48 @@ export class ErpError extends Error {
   }
 }
 
+interface ErpTarget {
+  erpType: string;
+  erpBaseUrl: string;
+  erpCompany: string;
+}
+
+// Small in-memory cache: org ERP config rarely changes, no need to hit the
+// DB on every single ERP call. 60s TTL keeps edits picked up quickly.
+const targetCache = new Map<string, { target: ErpTarget; at: number }>();
+
+async function getTarget(organizationId: string): Promise<ErpTarget> {
+  const hit = targetCache.get(organizationId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.target;
+
+  const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+  if (!org) {
+    throw new ErpError(500, `No organization "${organizationId}" - cannot resolve its ERP`);
+  }
+  const target = { erpType: org.erpType, erpBaseUrl: org.erpBaseUrl, erpCompany: org.erpCompany };
+  targetCache.set(organizationId, { target, at: Date.now() });
+  return target;
+}
+
 async function erp<T>(
   organizationId: string,
   method: string,
   path: string,
   body?: unknown
 ): Promise<T> {
-  const res = await fetch(`${env.ERP_BASE_URL}/api${path}`, {
+  const target = await getTarget(organizationId);
+
+  // Adapter branch point: when ERPNext support lands, "erpnext" gets its own
+  // request shape here (its REST API + token auth), same function signatures.
+  if (target.erpType !== "minierp") {
+    throw new ErpError(500, `ERP type "${target.erpType}" is not supported yet`);
+  }
+
+  const res = await fetch(`${target.erpBaseUrl}/api${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-org-id": organizationId,
+      "x-org-id": target.erpCompany, // the org's name INSIDE the ERP
     },
     body: body ? JSON.stringify(body) : undefined,
   });
