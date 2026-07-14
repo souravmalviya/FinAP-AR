@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verity - Database Design</title>
+<style>
+  :root {
+    --bg: #fbfbf8; --surface: #fff; --border: #e5e7ee; --text: #1a2030;
+    --text2: #5a6478; --text3: #93a0b4;
+    --indigo: #4f46e5; --teal: #0d9488; --violet: #7c3aed;
+    --green: #059669; --amber: #b45309; --blue: #2563eb; --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
+    padding: 40px 18px 90px;
+  }
+  .doc { max-width: 940px; margin: 0 auto; }
+  h1 { font-size: 26px; letter-spacing: -.4px; text-align: center; }
+  .datestamp { text-align: center; color: var(--text3); font-size: 12.5px; margin: 6px 0 30px; }
+  h2 { font-size: 19px; margin: 44px 0 8px; padding-top: 14px; border-top: 3px solid var(--border); }
+  h2 .no { color: var(--text3); font-weight: 800; margin-right: 8px; }
+  h3 { font-size: 15px; margin: 24px 0 8px; }
+  p.lead { color: var(--text2); margin-bottom: 14px; }
+  .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin: 12px 0 8px; overflow-x: auto; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text2); margin: 8px 4px 20px; }
+  .key { display: inline-block; font-weight: 800; font-size: 10px; padding: 1px 6px; border-radius: 6px; margin-right: 4px; }
+  .k-pk { background: #fdf3e0; color: var(--amber); }
+  .k-fk { background: #e8effc; color: var(--blue); }
+  .k-uq { background: #e7f7f0; color: var(--green); }
+  .k-en { background: #f1eafd; color: var(--violet); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; background: var(--surface); }
+  th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--text3); padding: 8px 12px; border: 1px solid var(--border); background: #f6f7fb; }
+  td { padding: 7px 12px; border: 1px solid var(--border); font-size: 12.8px; vertical-align: top; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; background: #f1f3f9; padding: 1px 6px; border-radius: 5px; }
+  .callout {
+    border-radius: 13px; padding: 15px 20px; margin: 14px 0; font-size: 13.5px;
+    background: linear-gradient(95deg, #eef0ff, #e6f7f5); border: 1px solid #d5d9f0;
+  }
+  .printhint { text-align: center; font-size: 12px; color: var(--text2); background: #fdf3e0; border: 1px solid #f0dcb0; border-radius: 10px; padding: 8px 14px; max-width: 460px; margin: 0 auto 10px; }
+  @media print { .printhint { display: none; } h2 { break-before: page; border-top: none; } .diagram { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<h1>Verity - Complete Database Design</h1>
+<div class="datestamp">Two PostgreSQL databases · finerp_ap (the product) + mini_erp (the ERP stand-in) · July 2026</div>
+<div class="printhint">To save as PDF: Ctrl + P, destination "Save as PDF".</div>
+
+<div class="legend">
+  <span><i class="key k-pk">PK</i> primary key</span>
+  <span><i class="key k-fk">FK</i> foreign key</span>
+  <span><i class="key k-uq">UQ</i> unique constraint</span>
+  <span><i class="key k-en">ENUM</i> fixed value set</span>
+  <span>solid line = real foreign key · dashed line = logical link (string tag / API reference)</span>
+</div>
+
+<!-- ====================================================== 1 -->
+<h2><span class="no">1.</span> Why two databases</h2>
+<p class="lead">
+Verity's own database (<code>finerp_ap</code>) stores the <b>workflow</b>: documents, what the AI read,
+approval tasks, the audit trail, users and organizations. The ERP database (<code>mini_erp</code>) stores
+<b>financial truth</b>: vendors, purchase orders, invoices, payments. They never share tables -
+Verity reaches the ERP only over its REST API, exactly as it would reach a customer's ERPNext or
+QuickBooks. If the two ever disagree about money, the ERP wins.
+</p>
+
+<!-- ====================================================== 2 -->
+<h2><span class="no">2.</span> finerp_ap - Verity's database (ER diagram)</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 900 570" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#7a869c"/>
+    </marker>
+  </defs>
+
+  <!-- Organization -->
+  <g>
+    <rect x="30" y="30" width="245" height="172" rx="10" fill="#fff" stroke="#4f46e5" stroke-width="1.6"/>
+    <rect x="30" y="30" width="245" height="30" rx="10" fill="#eef0ff"/>
+    <rect x="30" y="48" width="245" height="12" fill="#eef0ff"/>
+    <text x="152" y="50" text-anchor="middle" font-size="13" font-weight="800" fill="#4f46e5">Organization</text>
+    <text x="42" y="80"  font-size="11.5" fill="#1a2030">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="42" y="98"  font-size="11.5" fill="#1a2030">name  <tspan font-weight="800" fill="#059669">UQ</tspan></text>
+    <text x="42" y="116" font-size="11.5" fill="#1a2030">erpType  <tspan fill="#93a0b4">"minierp" | "erpnext"...</tspan></text>
+    <text x="42" y="134" font-size="11.5" fill="#1a2030">erpBaseUrl</text>
+    <text x="42" y="152" font-size="11.5" fill="#1a2030">erpCompany  <tspan fill="#93a0b4">org's name inside the ERP</tspan></text>
+    <text x="42" y="170" font-size="11.5" fill="#1a2030">erpApiKey / erpApiSecret</text>
+    <text x="42" y="190" font-size="10.5" fill="#93a0b4">the org's ERP connection lives HERE</text>
+  </g>
+
+  <!-- User -->
+  <g>
+    <rect x="30" y="300" width="245" height="152" rx="10" fill="#fff" stroke="#b45309" stroke-width="1.6"/>
+    <rect x="30" y="300" width="245" height="30" rx="10" fill="#fdf3e0"/>
+    <rect x="30" y="318" width="245" height="12" fill="#fdf3e0"/>
+    <text x="152" y="320" text-anchor="middle" font-size="13" font-weight="800" fill="#b45309">User</text>
+    <text x="42" y="350" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="42" y="368" font-size="11.5">organizationId  <tspan font-weight="800" fill="#2563eb">FK</tspan> <tspan fill="#93a0b4">→ Organization</tspan></text>
+    <text x="42" y="386" font-size="11.5">email  <tspan font-weight="800" fill="#059669">UQ</tspan></text>
+    <text x="42" y="404" font-size="11.5">name · passwordHash <tspan fill="#93a0b4">(bcrypt)</tspan></text>
+    <text x="42" y="422" font-size="11.5">role  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">ADMIN|AP_CLERK|FINANCE_HEAD|CFO|EMPLOYEE</tspan></text>
+  </g>
+
+  <!-- IngestedDocument -->
+  <g>
+    <rect x="340" y="130" width="255" height="260" rx="10" fill="#fff" stroke="#0d9488" stroke-width="1.6"/>
+    <rect x="340" y="130" width="255" height="30" rx="10" fill="#e6f7f5"/>
+    <rect x="340" y="148" width="255" height="12" fill="#e6f7f5"/>
+    <text x="467" y="150" text-anchor="middle" font-size="13" font-weight="800" fill="#0d9488">IngestedDocument</text>
+    <text x="352" y="180" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="352" y="198" font-size="11.5">organizationId  <tspan fill="#93a0b4">(string tag, scopes tenant)</tspan></text>
+    <text x="352" y="216" font-size="11.5">source  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">UPLOAD | EMAIL</tspan></text>
+    <text x="352" y="234" font-size="11.5">fileName · storageKey <tspan fill="#93a0b4">(raw PDF)</tspan></text>
+    <text x="352" y="252" font-size="11.5">sha256  <tspan font-weight="800" fill="#059669">UQ</tspan><tspan fill="#93a0b4">(org, sha256) = dedupe</tspan></text>
+    <text x="352" y="270" font-size="11.5">status  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">11-state journey</tspan></text>
+    <text x="352" y="288" font-size="11.5">failReason</text>
+    <text x="352" y="306" font-size="11.5">erpInvoiceId  <tspan fill="#93a0b4">→ ERP invoice (API ref)</tspan></text>
+    <text x="352" y="324" font-size="11.5">erpPoId  <tspan fill="#93a0b4">→ ERP purchase order (API ref)</tspan></text>
+    <text x="352" y="348" font-size="10.5" fill="#93a0b4">indexes: (org,status) · unique(org,sha256)</text>
+    <text x="352" y="366" font-size="10.5" fill="#93a0b4">one row per incoming invoice file</text>
+  </g>
+
+  <!-- Extraction -->
+  <g>
+    <rect x="670" y="30" width="210" height="170" rx="10" fill="#fff" stroke="#7c3aed" stroke-width="1.6"/>
+    <rect x="670" y="30" width="210" height="30" rx="10" fill="#f1eafd"/>
+    <rect x="670" y="48" width="210" height="12" fill="#f1eafd"/>
+    <text x="775" y="50" text-anchor="middle" font-size="13" font-weight="800" fill="#7c3aed">Extraction</text>
+    <text x="682" y="80"  font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="682" y="98"  font-size="11.5">documentId  <tspan font-weight="800" fill="#2563eb">FK</tspan> <tspan font-weight="800" fill="#059669">UQ</tspan> <tspan fill="#93a0b4">(1:1)</tspan></text>
+    <text x="682" y="116" font-size="11.5">vendorName · invoiceNo</text>
+    <text x="682" y="134" font-size="11.5">poNumber · dueDate</text>
+    <text x="682" y="152" font-size="11.5">amount  <tspan fill="#93a0b4">DECIMAL(14,2)</tspan></text>
+    <text x="682" y="170" font-size="11.5">engine  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">MOCK|CLAUDE|OPENROUTER</tspan></text>
+    <text x="682" y="190" font-size="10.5" fill="#93a0b4">what the AI read (untrusted input)</text>
+  </g>
+
+  <!-- ApprovalTask -->
+  <g>
+    <rect x="670" y="240" width="210" height="140" rx="10" fill="#fff" stroke="#b45309" stroke-width="1.6"/>
+    <rect x="670" y="240" width="210" height="30" rx="10" fill="#fdf3e0"/>
+    <rect x="670" y="258" width="210" height="12" fill="#fdf3e0"/>
+    <text x="775" y="260" text-anchor="middle" font-size="13" font-weight="800" fill="#b45309">ApprovalTask</text>
+    <text x="682" y="290" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="682" y="308" font-size="11.5">documentId  <tspan font-weight="800" fill="#2563eb">FK</tspan> <tspan font-weight="800" fill="#059669">UQ</tspan></text>
+    <text x="682" y="326" font-size="11.5">requiredRole  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">FINANCE_HEAD|CFO</tspan></text>
+    <text x="682" y="344" font-size="11.5">status  <tspan fill="#93a0b4">PENDING|APPROVED|REJECTED</tspan></text>
+    <text x="682" y="362" font-size="11.5">decidedBy · decidedAt</text>
+  </g>
+
+  <!-- WorkflowEvent -->
+  <g>
+    <rect x="670" y="415" width="210" height="140" rx="10" fill="#fff" stroke="#64748b" stroke-width="1.6"/>
+    <rect x="670" y="415" width="210" height="30" rx="10" fill="#eceef2"/>
+    <rect x="670" y="433" width="210" height="12" fill="#eceef2"/>
+    <text x="775" y="435" text-anchor="middle" font-size="13" font-weight="800" fill="#475569">WorkflowEvent</text>
+    <text x="682" y="465" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="682" y="483" font-size="11.5">documentId  <tspan font-weight="800" fill="#2563eb">FK</tspan></text>
+    <text x="682" y="501" font-size="11.5">step · actor  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">SYSTEM|AI|RULE|HUMAN</tspan></text>
+    <text x="682" y="519" font-size="11.5">message · data (JSON)</text>
+    <text x="682" y="541" font-size="10.5" fill="#dc2626" font-weight="700">APPEND-ONLY: never updated or deleted</text>
+  </g>
+
+  <!-- relationships -->
+  <line x1="152" y1="202" x2="152" y2="300" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="160" y="222" font-size="11" fill="#5a6478">1</text>
+  <text x="160" y="292" font-size="11" fill="#5a6478">N</text>
+  <text x="164" y="256" font-size="10.5" fill="#7a869c">has members</text>
+
+  <line x1="275" y1="110" x2="340" y2="170" stroke="#7a869c" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+  <text x="262" y="140" font-size="10.5" fill="#7a869c">organizationId (tag)</text>
+
+  <line x1="595" y1="190" x2="670" y2="120" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="606" y="176" font-size="11" fill="#5a6478">1</text>
+  <text x="648" y="132" font-size="11" fill="#5a6478">1</text>
+
+  <line x1="595" y1="270" x2="670" y2="305" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="606" y="266" font-size="11" fill="#5a6478">1</text>
+  <text x="640" y="298" font-size="11" fill="#5a6478">0..1</text>
+
+  <line x1="595" y1="350" x2="670" y2="480" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="606" y="352" font-size="11" fill="#5a6478">1</text>
+  <text x="646" y="470" font-size="11" fill="#5a6478">N</text>
+</svg>
+</div>
+
+<!-- ====================================================== 3 -->
+<h2><span class="no">3.</span> mini_erp - the ERP database (ER diagram)</h2>
+<p class="lead">Every table carries <code>organizationId</code> (the tenant tag the ERP receives as x-org-id). Money is always DECIMAL(14,2).</p>
+
+<div class="diagram">
+<svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#7a869c"/>
+    </marker>
+  </defs>
+
+  <!-- Vendor -->
+  <g>
+    <rect x="30" y="30" width="225" height="130" rx="10" fill="#fff" stroke="#0d9488" stroke-width="1.6"/>
+    <rect x="30" y="30" width="225" height="30" rx="10" fill="#e6f7f5"/>
+    <rect x="30" y="48" width="225" height="12" fill="#e6f7f5"/>
+    <text x="142" y="50" text-anchor="middle" font-size="13" font-weight="800" fill="#0d9488">Vendor</text>
+    <text x="42" y="80"  font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="42" y="98"  font-size="11.5">organizationId  <tspan fill="#93a0b4">(tenant tag)</tspan></text>
+    <text x="42" y="116" font-size="11.5">name  <tspan font-weight="800" fill="#059669">UQ</tspan><tspan fill="#93a0b4">(org, name)</tspan></text>
+    <text x="42" y="134" font-size="11.5">email · gstin</text>
+    <text x="42" y="152" font-size="10.5" fill="#93a0b4">companies you BUY from</text>
+  </g>
+
+  <!-- Customer -->
+  <g>
+    <rect x="30" y="320" width="225" height="120" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.6"/>
+    <rect x="30" y="320" width="225" height="30" rx="10" fill="#e8effc"/>
+    <rect x="30" y="338" width="225" height="12" fill="#e8effc"/>
+    <text x="142" y="340" text-anchor="middle" font-size="13" font-weight="800" fill="#2563eb">Customer</text>
+    <text x="42" y="370" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="42" y="388" font-size="11.5">organizationId · name  <tspan font-weight="800" fill="#059669">UQ</tspan><tspan fill="#93a0b4">(org, name)</tspan></text>
+    <text x="42" y="406" font-size="11.5">email · gstin</text>
+    <text x="42" y="426" font-size="10.5" fill="#93a0b4">companies you SELL to (AR side)</text>
+  </g>
+
+  <!-- PurchaseOrder -->
+  <g>
+    <rect x="340" y="30" width="245" height="165" rx="10" fill="#fff" stroke="#4f46e5" stroke-width="1.6"/>
+    <rect x="340" y="30" width="245" height="30" rx="10" fill="#eef0ff"/>
+    <rect x="340" y="48" width="245" height="12" fill="#eef0ff"/>
+    <text x="462" y="50" text-anchor="middle" font-size="13" font-weight="800" fill="#4f46e5">PurchaseOrder</text>
+    <text x="352" y="80"  font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="352" y="98"  font-size="11.5">organizationId · poNumber  <tspan font-weight="800" fill="#059669">UQ</tspan><tspan fill="#93a0b4">(org, no)</tspan></text>
+    <text x="352" y="116" font-size="11.5">vendorId  <tspan font-weight="800" fill="#2563eb">FK</tspan> <tspan fill="#93a0b4">→ Vendor</tspan></text>
+    <text x="352" y="134" font-size="11.5">amount  <tspan fill="#93a0b4">DECIMAL(14,2)</tspan> · description</text>
+    <text x="352" y="152" font-size="11.5">status  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">OPEN|MATCHED|CLOSED|CANCELLED</tspan></text>
+    <text x="352" y="176" font-size="10.5" fill="#93a0b4">"what we ordered" - matched by invoices</text>
+  </g>
+
+  <!-- Invoice -->
+  <g>
+    <rect x="340" y="245" width="245" height="205" rx="10" fill="#fff" stroke="#b45309" stroke-width="1.6"/>
+    <rect x="340" y="245" width="245" height="30" rx="10" fill="#fdf3e0"/>
+    <rect x="340" y="263" width="245" height="12" fill="#fdf3e0"/>
+    <text x="462" y="265" text-anchor="middle" font-size="13" font-weight="800" fill="#b45309">Invoice</text>
+    <text x="352" y="295" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="352" y="313" font-size="11.5">organizationId · type  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">AP|AR</tspan></text>
+    <text x="352" y="331" font-size="11.5">invoiceNo  <tspan font-weight="800" fill="#059669">UQ</tspan><tspan fill="#93a0b4">(org, type, no) = duplicate guard</tspan></text>
+    <text x="352" y="349" font-size="11.5">amount  <tspan fill="#93a0b4">DECIMAL(14,2)</tspan> · dueDate</text>
+    <text x="352" y="367" font-size="11.5">status  <tspan font-weight="800" fill="#7c3aed">ENUM</tspan> <tspan fill="#93a0b4">state machine, illegal jumps refused</tspan></text>
+    <text x="352" y="385" font-size="11.5">vendorId  <tspan font-weight="800" fill="#2563eb">FK?</tspan> <tspan fill="#93a0b4">(AP)</tspan> · customerId  <tspan font-weight="800" fill="#2563eb">FK?</tspan> <tspan fill="#93a0b4">(AR)</tspan></text>
+    <text x="352" y="403" font-size="11.5">purchaseOrderId  <tspan font-weight="800" fill="#2563eb">FK?</tspan> <tspan fill="#93a0b4">→ the PO it bills</tspan></text>
+    <text x="352" y="427" font-size="10.5" fill="#93a0b4">indexes: (org,status) · (org,dueDate)</text>
+  </g>
+
+  <!-- Payment -->
+  <g>
+    <rect x="670" y="290" width="210" height="145" rx="10" fill="#fff" stroke="#059669" stroke-width="1.6"/>
+    <rect x="670" y="290" width="210" height="30" rx="10" fill="#e7f7f0"/>
+    <rect x="670" y="308" width="210" height="12" fill="#e7f7f0"/>
+    <text x="775" y="310" text-anchor="middle" font-size="13" font-weight="800" fill="#059669">Payment</text>
+    <text x="682" y="340" font-size="11.5">id  <tspan font-weight="800" fill="#b45309">PK</tspan></text>
+    <text x="682" y="358" font-size="11.5">organizationId</text>
+    <text x="682" y="376" font-size="11.5">invoiceId  <tspan font-weight="800" fill="#2563eb">FK</tspan> <tspan fill="#93a0b4">→ Invoice (RESTRICT delete)</tspan></text>
+    <text x="682" y="394" font-size="11.5">amount  <tspan fill="#93a0b4">DECIMAL(14,2)</tspan> · paidOn · reference</text>
+    <text x="682" y="418" font-size="10.5" fill="#93a0b4">written ATOMICALLY with invoice→PAID</text>
+  </g>
+
+  <!-- relationships -->
+  <line x1="255" y1="95" x2="340" y2="95" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="263" y="88" font-size="11" fill="#5a6478">1</text>
+  <text x="322" y="88" font-size="11" fill="#5a6478">N</text>
+
+  <polyline points="255,140 300,140 300,340 340,340" fill="none" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="262" y="133" font-size="11" fill="#5a6478">1</text>
+  <text x="306" y="332" font-size="11" fill="#5a6478">N (AP)</text>
+
+  <line x1="255" y1="380" x2="340" y2="380" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="263" y="373" font-size="11" fill="#5a6478">1</text>
+  <text x="316" y="373" font-size="11" fill="#5a6478">N (AR)</text>
+
+  <line x1="462" y1="195" x2="462" y2="245" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="470" y="210" font-size="11" fill="#5a6478">1</text>
+  <text x="470" y="240" font-size="11" fill="#5a6478">0..N billed by</text>
+
+  <line x1="585" y1="345" x2="670" y2="345" stroke="#7a869c" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="593" y="338" font-size="11" fill="#5a6478">1</text>
+  <text x="650" y="338" font-size="11" fill="#5a6478">N</text>
+</svg>
+</div>
+
+<!-- ====================================================== 4 -->
+<h2><span class="no">4.</span> How the two databases connect (no shared tables!)</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 900 190" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#0d9488"/>
+    </marker>
+  </defs>
+  <rect x="20" y="30" width="300" height="130" rx="10" fill="#eef0ff" stroke="#4f46e5" stroke-width="1.6"/>
+  <text x="170" y="55" text-anchor="middle" font-size="13" font-weight="800" fill="#4f46e5">finerp_ap · Organization row</text>
+  <text x="38" y="82"  font-size="11.5">id: "8b431e83..."  (Verity-internal)</text>
+  <text x="38" y="102" font-size="11.5">erpType: "minierp" → picks the ADAPTER</text>
+  <text x="38" y="122" font-size="11.5">erpBaseUrl: "http://localhost:4000"</text>
+  <text x="38" y="142" font-size="11.5" font-weight="700">erpCompany: "pine_labs"</text>
+
+  <line x1="320" y1="95" x2="560" y2="95" stroke="#0d9488" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="440" y="80" text-anchor="middle" font-size="11.5" fill="#0d9488" font-weight="700">REST call with header</text>
+  <text x="440" y="115" text-anchor="middle" font-size="11.5" fill="#0d9488">x-org-id: pine_labs</text>
+
+  <rect x="565" y="30" width="315" height="130" rx="10" fill="#e6f7f5" stroke="#0d9488" stroke-width="1.6"/>
+  <text x="722" y="55" text-anchor="middle" font-size="13" font-weight="800" fill="#0d9488">mini_erp · every table</text>
+  <text x="583" y="85" font-size="11.5">rows WHERE organizationId = "pine_labs"</text>
+  <text x="583" y="107" font-size="11.5">Verity stores the returned ids as strings:</text>
+  <text x="583" y="127" font-size="11.5">IngestedDocument.erpInvoiceId / erpPoId</text>
+  <text x="583" y="147" font-size="10.5" fill="#5a6478">(API references - not database foreign keys)</text>
+</svg>
+</div>
+
+<div class="callout">
+<b>The bridge in one sentence:</b> Verity's Organization row translates "my org" into
+"that ERP, that URL, that company tag"; the ERP filters everything by the tag it receives; and Verity
+remembers the ERP's record ids (<code>erpInvoiceId</code>, <code>erpPoId</code>) as plain strings, because
+you cannot have real foreign keys across two databases - referential integrity across systems is
+maintained by the API + the conflict-reconciliation logic, not by PostgreSQL.
+</div>
+
+<!-- ====================================================== 5 -->
+<h2><span class="no">5.</span> Column dictionary - finerp_ap</h2>
+
+<h3>Organization</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK. uuid (legacy demo org uses literal "org_demo")</td></tr>
+<tr><td>name</td><td>TEXT</td><td>UNIQUE. Shown in the dashboard top bar</td></tr>
+<tr><td>erpType</td><td>TEXT</td><td>adapter selector: "minierp" today; "erpnext"/"quickbooks" later</td></tr>
+<tr><td>erpBaseUrl</td><td>TEXT</td><td>where this org's ERP lives</td></tr>
+<tr><td>erpCompany</td><td>TEXT</td><td>the org's identity inside its ERP (sent as x-org-id)</td></tr>
+<tr><td>erpApiKey / erpApiSecret</td><td>TEXT?</td><td>credentials for real ERPs (unused by miniERP)</td></tr>
+<tr><td>createdAt</td><td>TIMESTAMP</td><td>-</td></tr></table>
+
+<h3>User</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK (uuid)</td></tr>
+<tr><td>organizationId</td><td>TEXT</td><td>FK → Organization.id (RESTRICT). The tenant comes from THIS via the JWT</td></tr>
+<tr><td>email</td><td>TEXT</td><td>UNIQUE (global). Login identifier, stored lowercase</td></tr>
+<tr><td>name</td><td>TEXT</td><td>shown in top bar + audit log</td></tr>
+<tr><td>passwordHash</td><td>TEXT</td><td>bcrypt - plaintext is never stored</td></tr>
+<tr><td>role</td><td>ENUM</td><td>ADMIN | AP_CLERK | FINANCE_HEAD | CFO | EMPLOYEE (view-only)</td></tr></table>
+
+<h3>IngestedDocument</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK (uuid)</td></tr>
+<tr><td>organizationId</td><td>TEXT</td><td>tenant tag; every query filters by it. index (org, status)</td></tr>
+<tr><td>source</td><td>ENUM</td><td>UPLOAD | EMAIL</td></tr>
+<tr><td>fileName</td><td>TEXT</td><td>original file name</td></tr>
+<tr><td>storageKey</td><td>TEXT</td><td>where the raw PDF lives: org/yyyy/mm/uuid.pdf (S3-style adapter)</td></tr>
+<tr><td>sha256</td><td>TEXT</td><td>UNIQUE(organizationId, sha256) - duplicate-file guard, enforced by the DB itself</td></tr>
+<tr><td>status</td><td>ENUM</td><td>RECEIVED→QUEUED→EXTRACTING→MATCHED→PENDING_APPROVAL→APPROVED→PAID, plus NEEDS_REVIEW / DUPLICATE / FAILED / REJECTED</td></tr>
+<tr><td>failReason</td><td>TEXT?</td><td>human-readable reason when flagged</td></tr>
+<tr><td>erpInvoiceId / erpPoId</td><td>TEXT?</td><td>ids of the records Verity created/matched in the ERP (API references)</td></tr></table>
+
+<h3>Extraction</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>documentId</td><td>TEXT</td><td>FK → IngestedDocument, UNIQUE (strict 1:1)</td></tr>
+<tr><td>rawText</td><td>TEXT</td><td>full text pulled from the PDF</td></tr>
+<tr><td>vendorName / invoiceNo / poNumber</td><td>TEXT?</td><td>nullable - extraction may partially succeed; rules decide what is missing</td></tr>
+<tr><td>amount</td><td>DECIMAL(14,2)?</td><td>never float - money must be exact</td></tr>
+<tr><td>dueDate</td><td>TIMESTAMP?</td><td>-</td></tr>
+<tr><td>engine</td><td>ENUM</td><td>MOCK | CLAUDE | OPENROUTER - recorded for audit</td></tr></table>
+
+<h3>ApprovalTask</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>organizationId</td><td>TEXT</td><td>tenant tag; index (org, status)</td></tr>
+<tr><td>documentId</td><td>TEXT</td><td>FK → IngestedDocument, UNIQUE (max one task per document)</td></tr>
+<tr><td>requiredRole</td><td>ENUM</td><td>FINANCE_HEAD (50k-5L) | CFO (&gt;5L). CFO/ADMIN outrank</td></tr>
+<tr><td>status</td><td>ENUM</td><td>PENDING | APPROVED | REJECTED</td></tr>
+<tr><td>decidedBy / decidedAt</td><td>TEXT? / TIMESTAMP?</td><td>the authenticated person, from the JWT - not typed text</td></tr></table>
+
+<h3>WorkflowEvent (append-only audit log)</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>organizationId / documentId</td><td>TEXT</td><td>documentId FK → IngestedDocument; both indexed</td></tr>
+<tr><td>step</td><td>TEXT</td><td>INGEST · EXTRACT · VERIFY · ERP_SYNC · ROUTE · APPROVAL · PAY · REQUEUE · ERROR</td></tr>
+<tr><td>actor</td><td>ENUM</td><td>SYSTEM | AI | RULE | HUMAN - who made this decision</td></tr>
+<tr><td>message / data</td><td>TEXT / JSON?</td><td>human-readable line + structured detail. Rows are never updated or deleted</td></tr></table>
+
+<!-- ====================================================== 6 -->
+<h2><span class="no">6.</span> Column dictionary - mini_erp</h2>
+
+<h3>Vendor / Customer</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK (uuid)</td></tr>
+<tr><td>organizationId</td><td>TEXT</td><td>tenant tag (the x-org-id the ERP received)</td></tr>
+<tr><td>name</td><td>TEXT</td><td>UNIQUE(organizationId, name) - same vendor name can exist for different orgs</td></tr>
+<tr><td>email / gstin</td><td>TEXT?</td><td>gstin = Indian tax id, optional</td></tr></table>
+
+<h3>PurchaseOrder</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>organizationId / poNumber</td><td>TEXT</td><td>UNIQUE(org, poNumber)</td></tr>
+<tr><td>vendorId</td><td>TEXT</td><td>FK → Vendor (a PO always belongs to one vendor)</td></tr>
+<tr><td>amount</td><td>DECIMAL(14,2)</td><td>what we agreed to pay</td></tr>
+<tr><td>status</td><td>ENUM</td><td>OPEN → MATCHED (invoice with equal amount linked) → CLOSED (paid) | CANCELLED</td></tr></table>
+
+<h3>Invoice</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>organizationId / type / invoiceNo</td><td>TEXT/ENUM/TEXT</td><td>type AP (we owe) | AR (owed to us). UNIQUE(org, type, invoiceNo) = the DB-level duplicate-invoice guard</td></tr>
+<tr><td>amount / dueDate</td><td>DECIMAL(14,2) / TIMESTAMP</td><td>-</td></tr>
+<tr><td>status</td><td>ENUM</td><td>RECEIVED → PENDING_APPROVAL → APPROVED → PAID; REJECTED terminal. ALLOWED_TRANSITIONS map refuses illegal jumps (e.g. RECEIVED→PAID)</td></tr>
+<tr><td>vendorId / customerId</td><td>TEXT?</td><td>FK SET NULL - exactly one is set, matching the type</td></tr>
+<tr><td>purchaseOrderId</td><td>TEXT?</td><td>FK → PurchaseOrder. Linking triggers the amount MATCH; PO must belong to the same vendor</td></tr></table>
+
+<h3>Payment</h3>
+<table><tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td>id</td><td>TEXT</td><td>PK</td></tr>
+<tr><td>organizationId / invoiceId</td><td>TEXT</td><td>invoiceId FK → Invoice with ON DELETE RESTRICT: an invoice with payments can never be deleted</td></tr>
+<tr><td>amount / paidOn / reference</td><td>DECIMAL(14,2) / TIMESTAMP / TEXT?</td><td>inserted in ONE transaction with invoice→PAID and PO→CLOSED - all or nothing</td></tr></table>
+
+<!-- ====================================================== 7 -->
+<h2><span class="no">7.</span> The design principles this schema encodes</h2>
+<table><tr><th>Principle</th><th>Where you see it</th></tr>
+<tr><td><b>Money is DECIMAL, never float</b></td><td>every amount column is DECIMAL(14,2) - floats cannot represent 0.10 exactly</td></tr>
+<tr><td><b>Duplicates die at the database</b></td><td>UNIQUE(org, sha256) for files; UNIQUE(org, type, invoiceNo) for invoices - even buggy code cannot insert twice</td></tr>
+<tr><td><b>The workflow is a state machine</b></td><td>status enums + ALLOWED_TRANSITIONS; illegal jumps get a 400, not a corrupted state</td></tr>
+<tr><td><b>Multi-tenancy on every row</b></td><td>organizationId everywhere; in Verity the tenant comes from the login token, never from client input</td></tr>
+<tr><td><b>Audit is append-only</b></td><td>WorkflowEvent rows are never updated or deleted; corrections are new events</td></tr>
+<tr><td><b>Cross-system links are API refs, not FKs</b></td><td>erpInvoiceId/erpPoId are strings; consistency across systems is the pipeline's job (ERP wins on conflict)</td></tr>
+<tr><td><b>Delete is restricted where money lives</b></td><td>Payment→Invoice is ON DELETE RESTRICT; Organization→User RESTRICT</td></tr></table>
+
+</div>
+</body>
+</html>

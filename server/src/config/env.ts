@@ -31,3 +31,9 @@ export const env = {
 if (!env.DATABASE_URL) {
   throw new Error("DATABASE_URL is missing - copy .env.example to .env");
 }
+
+// Deployment guard: shipping the default JWT secret would let anyone forge
+// login tokens. Loud warning in production, harmless in local dev.
+if (process.env.NODE_ENV === "production" && env.JWT_SECRET === "dev-secret-change-me-in-production") {
+  console.error("SECURITY WARNING: JWT_SECRET is still the dev default - set a long random value!");
+}

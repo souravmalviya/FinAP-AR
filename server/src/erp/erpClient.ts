@@ -1,139 +1,102 @@
 import { prisma } from "../config/db.js";
+import { ErpAdapter, ErpError, NewErpInvoice, OrgErpConfig } from "./types.js";
+import { miniErpAdapter } from "./miniErpAdapter.js";
+
+// Re-export the shared types so callers keep importing everything from here.
+export { ErpError } from "./types.js";
+export type { ErpVendor, ErpPurchaseOrder, ErpInvoice } from "./types.js";
 
 // ----------------------------------------------------------------------------
-//  ERP client - the ONLY file that knows how to talk to the ERP.
+//  ERP client - the pipeline's single door to "the org's ERP".
 //
-//  ORG-AWARE since the Organization entity landed: each organization's row in
-//  Verity's DB says WHICH ERP it uses (erpType), WHERE it lives (erpBaseUrl),
-//  and WHAT the org is called inside that ERP (erpCompany). This function
-//  looks that up and dials accordingly - so different orgs can use different
-//  ERPs, and swapping the miniERP for ERPNext is a config change plus one new
-//  adapter branch, never a pipeline change.
+//  How a call flows:
+//    pipeline calls listVendors(orgId)
+//      -> resolve(orgId): load the org's ERP config (which ERP, where, as whom)
+//      -> pick the adapter for org.erpType from the REGISTRY below
+//      -> delegate the operation to that adapter
+//
+//  ADDING A NEW ERP (e.g. ERPNext) is exactly two steps:
+//    1. write src/erp/erpNextAdapter.ts implementing the ErpAdapter interface
+//    2. add one line here:  erpnext: erpNextAdapter,
+//  Store the org's real erpBaseUrl/erpApiKey in its Organization row - done.
+//  No pipeline, rule, or route code ever changes.
 // ----------------------------------------------------------------------------
 
-export class ErpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
+const ADAPTERS: Record<string, ErpAdapter> = {
+  minierp: miniErpAdapter,
+  // erpnext: erpNextAdapter,      <- future ERPs slot in here
+  // quickbooks: quickBooksAdapter,
+};
 
-interface ErpTarget {
-  erpType: string;
-  erpBaseUrl: string;
-  erpCompany: string;
-}
+// Org ERP config rarely changes - a 60s cache avoids a DB hit per ERP call.
+const cache = new Map<string, { adapter: ErpAdapter; cfg: OrgErpConfig; at: number }>();
 
-// Small in-memory cache: org ERP config rarely changes, no need to hit the
-// DB on every single ERP call. 60s TTL keeps edits picked up quickly.
-const targetCache = new Map<string, { target: ErpTarget; at: number }>();
-
-async function getTarget(organizationId: string): Promise<ErpTarget> {
-  const hit = targetCache.get(organizationId);
-  if (hit && Date.now() - hit.at < 60_000) return hit.target;
+async function resolve(organizationId: string): Promise<{ adapter: ErpAdapter; cfg: OrgErpConfig }> {
+  const hit = cache.get(organizationId);
+  if (hit && Date.now() - hit.at < 60_000) return hit;
 
   const org = await prisma.organization.findUnique({ where: { id: organizationId } });
   if (!org) {
     throw new ErpError(500, `No organization "${organizationId}" - cannot resolve its ERP`);
   }
-  const target = { erpType: org.erpType, erpBaseUrl: org.erpBaseUrl, erpCompany: org.erpCompany };
-  targetCache.set(organizationId, { target, at: Date.now() });
-  return target;
-}
-
-async function erp<T>(
-  organizationId: string,
-  method: string,
-  path: string,
-  body?: unknown
-): Promise<T> {
-  const target = await getTarget(organizationId);
-
-  // Adapter branch point: when ERPNext support lands, "erpnext" gets its own
-  // request shape here (its REST API + token auth), same function signatures.
-  if (target.erpType !== "minierp") {
-    throw new ErpError(500, `ERP type "${target.erpType}" is not supported yet`);
+  const adapter = ADAPTERS[org.erpType];
+  if (!adapter) {
+    throw new ErpError(500, `ERP type "${org.erpType}" is not supported (known: ${Object.keys(ADAPTERS).join(", ")})`);
   }
-
-  const res = await fetch(`${target.erpBaseUrl}/api${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "x-org-id": target.erpCompany, // the org's name INSIDE the ERP
+  const entry = {
+    adapter,
+    cfg: {
+      baseUrl: org.erpBaseUrl,
+      company: org.erpCompany,
+      apiKey: org.erpApiKey,
+      apiSecret: org.erpApiSecret,
     },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) {
-    throw new ErpError(res.status, data.error ?? `ERP call failed: ${method} ${path}`);
-  }
-  return data as T;
+    at: Date.now(),
+  };
+  cache.set(organizationId, entry);
+  return entry;
 }
 
-// --- Types mirroring the Mini-ERP's API shapes (only fields we use) ---------
+// --- The operations the pipeline uses (signatures unchanged) -------------------
 
-export interface ErpVendor {
-  id: string;
-  name: string;
+export async function listVendors(orgId: string) {
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.listVendors(cfg);
 }
 
-export interface ErpPurchaseOrder {
-  id: string;
-  poNumber: string;
-  vendorId: string;
-  amount: string; // Prisma Decimal serialises as string
-  status: "OPEN" | "MATCHED" | "CLOSED" | "CANCELLED";
+export async function listOpenPOs(orgId: string) {
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.listOpenPOs(cfg);
 }
 
-export interface ErpInvoice {
-  id: string;
-  invoiceNo: string;
-  amount: string;
-  status: "RECEIVED" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "PAID";
-  purchaseOrderId: string | null;
+export async function getPO(orgId: string, id: string) {
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.getPO(cfg, id);
 }
 
-// --- The operations the pipeline needs --------------------------------------
-
-export function listVendors(orgId: string) {
-  return erp<ErpVendor[]>(orgId, "GET", "/vendors");
+export async function getInvoice(orgId: string, id: string) {
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.getInvoice(cfg, id);
 }
 
-export function listOpenPOs(orgId: string) {
-  return erp<ErpPurchaseOrder[]>(orgId, "GET", "/purchase-orders?status=OPEN");
+export async function createInvoice(orgId: string, input: NewErpInvoice) {
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.createInvoice(cfg, input);
 }
 
-export function getPO(orgId: string, id: string) {
-  return erp<ErpPurchaseOrder>(orgId, "GET", `/purchase-orders/${id}`);
-}
-
-export function getInvoice(orgId: string, id: string) {
-  return erp<ErpInvoice>(orgId, "GET", `/invoices/${id}`);
-}
-
-export function createInvoice(
-  orgId: string,
-  input: {
-    invoiceNo: string;
-    amount: number;
-    dueDate: string; // ISO date
-    vendorId: string;
-    purchaseOrderId?: string;
-  }
-) {
-  return erp<ErpInvoice>(orgId, "POST", "/invoices", { type: "AP", ...input });
-}
-
-export function setInvoiceStatus(
+export async function setInvoiceStatus(
   orgId: string,
   invoiceId: string,
   status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED"
 ) {
-  return erp<ErpInvoice>(orgId, "PATCH", `/invoices/${invoiceId}/status`, { status });
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.setInvoiceStatus(cfg, invoiceId, status);
 }
 
-export function createPayment(
+export async function createPayment(
   orgId: string,
   input: { invoiceId: string; amount: number; reference?: string }
 ) {
-  return erp<{ id: string }>(orgId, "POST", "/payments", input);
+  const { adapter, cfg } = await resolve(orgId);
+  return adapter.createPayment(cfg, input);
 }
