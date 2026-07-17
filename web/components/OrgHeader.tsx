@@ -32,7 +32,7 @@ export default function OrgHeader() {
   return (
     <header className="topbar">
       <span className="brand">
-        <Logo size={30} /> Verity
+        <Logo size={36} /> Verity
       </span>
       <nav>
         <Link href="/" className={isActive("/") ? "active" : ""}>Documents</Link>

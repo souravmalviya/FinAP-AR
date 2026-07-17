@@ -31,12 +31,13 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: "60px auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, justifyContent: "center" }}>
-        <Logo size={40} />
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.3px" }}>Verity</div>
-          <div style={{ fontSize: 12, color: "var(--text-3)" }}>Every invoice, verified.</div>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 20, textAlign: "center" }}>
+        <Logo size={76} />
+        <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.4px" }}>Welcome to Verity</div>
+        <p style={{ fontSize: 12.5, color: "var(--text-3)", maxWidth: 330, lineHeight: 1.6, margin: 0 }}>
+          <b>Verity</b> means truth, from the Latin <i>Veritas</i>.
+          The name is the promise: every invoice, verified.
+        </p>
       </div>
       <div className="card pad">
         <h1 style={{ marginBottom: 4 }}>Sign in</h1>
