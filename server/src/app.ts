@@ -137,10 +137,27 @@ app.post("/api/documents/upload", requireRole("AP_CLERK", "FINANCE_HEAD", "CFO",
 });
 
 // ---- READ: documents + timeline ---------------------------------------------
+// Optional ?q= searches across file name and the extracted vendor / invoice
+// number / PO number, case-insensitive. Server-side on purpose: the list only
+// ever grows (no deletes by design), and search must keep working once
+// pagination lands and the browser holds just one page.
 app.get("/api/documents", asyncHandler(async (req, res) => {
   const orgId = (req as any).orgId as string;
+  const q = String(req.query.q ?? "").trim().slice(0, 100);
   const docs = await prisma.ingestedDocument.findMany({
-    where: { organizationId: orgId },
+    where: {
+      organizationId: orgId,
+      ...(q
+        ? {
+            OR: [
+              { fileName: { contains: q, mode: "insensitive" } },
+              { extraction: { is: { vendorName: { contains: q, mode: "insensitive" } } } },
+              { extraction: { is: { invoiceNo: { contains: q, mode: "insensitive" } } } },
+              { extraction: { is: { poNumber: { contains: q, mode: "insensitive" } } } },
+            ],
+          }
+        : {}),
+    },
     include: { extraction: true, approval: true },
     orderBy: { createdAt: "desc" },
   });

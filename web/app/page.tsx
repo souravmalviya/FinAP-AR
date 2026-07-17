@@ -23,6 +23,8 @@ export default function DocumentsPage() {
   const router = useRouter();
   const [docs, setDocs] = useState<DocumentRow[] | null>(null); // null = first load
   const [filter, setFilter] = useState<Filter>("ALL");
+  const [search, setSearch] = useState(""); // what the user is typing
+  const [q, setQ] = useState(""); // debounced copy that actually hits the API
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,15 +38,24 @@ export default function DocumentsPage() {
     setCanUpload(!!u && u.role !== "EMPLOYEE");
   }, []);
 
+  // Debounce: wait 350ms after the last keystroke before searching, so we
+  // don't fire one API call per typed character.
+  useEffect(() => {
+    const t = setTimeout(() => setQ(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const refresh = useCallback(async () => {
     try {
-      setDocs(await listDocuments());
+      setDocs(await listDocuments(q));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Pipeline API unreachable (is :5000 running?)");
     }
-  }, []);
+  }, [q]);
 
+  // Runs on mount AND whenever the debounced query changes (refresh is
+  // recreated then) - so the 3s poll always polls with the current search.
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, 3000);
@@ -108,12 +119,27 @@ export default function DocumentsPage() {
 
       {error && <div className="flag">⚠ {error}</div>}
 
-      <div className="chips">
-        {FILTERS.map((f) => (
-          <button key={f.key} className={`chip ${filter === f.key ? "on" : ""}`} onClick={() => setFilter(f.key)}>
-            {f.label}
-          </button>
-        ))}
+      <div className="listbar">
+        <div className="chips">
+          {FILTERS.map((f) => (
+            <button key={f.key} className={`chip ${filter === f.key ? "on" : ""}`} onClick={() => setFilter(f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="searchbox">
+          <span className="glass">🔍</span>
+          <input
+            type="text"
+            placeholder="Search vendor, invoice #, PO, file…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search documents"
+          />
+          {search && (
+            <button className="clear" onClick={() => setSearch("")} aria-label="Clear search">×</button>
+          )}
+        </div>
       </div>
 
       <div className="card">
@@ -133,7 +159,9 @@ export default function DocumentsPage() {
               ))}
             {docs !== null && shown.length === 0 && (
               <tr><td colSpan={7} className="empty">
-                {filter === "ALL" ? "Nothing yet - upload an invoice PDF above." : "No documents match this filter."}
+                {q
+                  ? `No invoices match "${q}"${filter !== "ALL" ? " in this filter" : ""}.`
+                  : filter === "ALL" ? "Nothing yet - upload an invoice PDF above." : "No documents match this filter."}
               </td></tr>
             )}
             {shown.map((d) => (

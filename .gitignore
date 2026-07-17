@@ -12,6 +12,9 @@ dist/
 storage/
 samples/
 
+# --- internal design/engineering docs (kept local, not published) ---
+docs/
+
 # --- OS / editor junk ---
 .DS_Store
 Thumbs.db

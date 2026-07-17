@@ -9,6 +9,15 @@ export const env = {
   // Signs login tokens. MUST be a long random string in production.
   JWT_SECRET: process.env.JWT_SECRET ?? "dev-secret-change-me-in-production",
   STORAGE_DIR: process.env.STORAGE_DIR ?? "./storage",
+  // --- S3 storage (optional) ------------------------------------------------
+  // If S3_BUCKET is set, PDFs go to AWS S3 and STORAGE_DIR is ignored.
+  // Credentials use the AWS SDK's standard names (AWS_ACCESS_KEY_ID and
+  // AWS_SECRET_ACCESS_KEY) which the SDK reads from the environment itself.
+  // S3_ENDPOINT is only for S3-compatible services (e.g. Cloudflare R2);
+  // leave it empty for real AWS.
+  S3_BUCKET: process.env.S3_BUCKET ?? "",
+  S3_REGION: process.env.S3_REGION ?? "ap-south-1",
+  S3_ENDPOINT: process.env.S3_ENDPOINT ?? "",
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
   // OpenRouter: one API key for many models (Claude/GPT/Gemini...).
   // If set (and no Anthropic key), extraction uses OpenRouter.

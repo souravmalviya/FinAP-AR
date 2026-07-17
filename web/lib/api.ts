@@ -137,7 +137,8 @@ export interface DocumentRow {
 
 // --- Operations ----------------------------------------------------------------
 
-export const listDocuments = () => api<DocumentRow[]>("/documents");
+export const listDocuments = (q?: string) =>
+  api<DocumentRow[]>(`/documents${q ? `?q=${encodeURIComponent(q)}` : ""}`);
 export const getDocument = (id: string) => api<DocumentRow>(`/documents/${id}`);
 export const listApprovals = () => api<ApprovalTask[]>("/approvals");
 
