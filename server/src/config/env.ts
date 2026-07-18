@@ -35,6 +35,30 @@ export const env = {
   VALKEY_URL: process.env.VALKEY_URL ?? "",
   VALKEY_HOST: process.env.VALKEY_HOST ?? "localhost",
   VALKEY_PORT: Number(process.env.VALKEY_PORT) || 6379,
+  // --- security knobs (every threshold configurable, none hardcoded) --------
+  // CORS: "*" is fine for local dev; in production set the exact dashboard
+  // origin (e.g. https://verity.vercel.app) so no other site can call the API
+  // from a browser.
+  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
+  // Upload cap in megabytes - enforced by multer AND at the ingest front door
+  // (the front door also covers email attachments).
+  UPLOAD_MAX_MB: Number(process.env.UPLOAD_MAX_MB) || 10,
+  // Auth endpoints (login/register): strict per-IP window.
+  RATE_AUTH_WINDOW_MIN: Number(process.env.RATE_AUTH_WINDOW_MIN) || 15,
+  RATE_AUTH_MAX: Number(process.env.RATE_AUTH_MAX) || 20,
+  // Authenticated API: looser per-user window (keyed by user id, not IP).
+  RATE_USER_WINDOW_MIN: Number(process.env.RATE_USER_WINDOW_MIN) || 1,
+  RATE_USER_MAX: Number(process.env.RATE_USER_MAX) || 240,
+  // Per-ACCOUNT login backoff: first N failures are free, then the wait
+  // doubles per failure (base * 2^extra) up to the cap. No hard lockout -
+  // an attacker can't permanently lock a victim out of their own account.
+  LOGIN_BACKOFF_FREE_FAILS: Number(process.env.LOGIN_BACKOFF_FREE_FAILS) || 3,
+  LOGIN_BACKOFF_BASE_SECONDS: Number(process.env.LOGIN_BACKOFF_BASE_SECONDS) || 2,
+  LOGIN_BACKOFF_MAX_SECONDS: Number(process.env.LOGIN_BACKOFF_MAX_SECONDS) || 300,
+  // Bull Board dashboard: with both set, /admin/queues demands basic auth;
+  // with either unset, the dashboard only mounts outside production.
+  BULLBOARD_USER: process.env.BULLBOARD_USER ?? "",
+  BULLBOARD_PASSWORD: process.env.BULLBOARD_PASSWORD ?? "",
 };
 
 if (!env.DATABASE_URL) {

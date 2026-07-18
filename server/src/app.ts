@@ -2,12 +2,13 @@ import express, { Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { env } from "./config/env.js";
 import { prisma } from "./config/db.js";
-import { ingestFile } from "./ingest/ingestFile.js";
+import { ingestFile, InvalidPdfError } from "./ingest/ingestFile.js";
 import { audit } from "./audit/audit.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
 import { requireAuth, requireRole, signToken, verifyPassword, hashPassword, AuthUser } from "./auth/auth.js";
-import { UserRole } from "@prisma/client";
 import * as erp from "./erp/erpClient.js";
+import { authLimiter, apiLimiter, loginGate, noteLoginFailure, noteLoginSuccess } from "./security/rateLimit.js";
+import { registerSchema, loginSchema, uuidSchema, searchQuerySchema, paySchema, rejectInvalid } from "./utils/validate.js";
 
 // ----------------------------------------------------------------------------
 //  The product's API. Endpoints:
@@ -21,11 +22,20 @@ import * as erp from "./erp/erpClient.js";
 // ----------------------------------------------------------------------------
 
 export const app = express();
-app.use(express.json());
 
-// CORS - the Next.js dashboard (localhost:3000) will call this API.
+// Behind Render/Railway/Vercel a proxy sits in front of us; without this,
+// req.ip would be the proxy's address and per-IP rate limits would lump every
+// visitor together.
+app.set("trust proxy", 1);
+
+// Cap JSON bodies: our biggest legitimate JSON payload is a login/register
+// form. (File uploads use multipart via multer, not this parser.)
+app.use(express.json({ limit: "100kb" }));
+
+// CORS - which browser origins may call this API. "*" locally; the exact
+// dashboard URL in production (set CORS_ORIGIN).
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Origin", env.CORS_ORIGIN);
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
@@ -36,24 +46,14 @@ app.get("/health", (_req, res) => res.json({ status: "ok", service: "finerp-ap" 
 
 // ---- AUTH (public routes - the only /api paths that work without a token) ----
 
-// Roles a person may pick for themselves at sign-up.
-// (Self-pick of powerful roles is a demo convenience - in production this
-// list shrinks to ["EMPLOYEE"] and finance roles come via admin invitation.)
-const SELF_SERVE_ROLES: UserRole[] = ["EMPLOYEE", "AP_CLERK", "FINANCE_HEAD", "CFO", "ADMIN"];
+// Role choice at sign-up is validated by registerSchema's enum - a demo
+// convenience; in production the list shrinks to ["EMPLOYEE"] and finance
+// roles come via admin invitation.
 
-app.post("/api/auth/register", asyncHandler(async (req, res) => {
-  const name = String(req.body?.name ?? "").trim();
-  const email = String(req.body?.email ?? "").trim().toLowerCase();
-  const password = String(req.body?.password ?? "").trim();
-  const role = String(req.body?.role ?? "") as UserRole;
-  const organizationName = String(req.body?.organizationName ?? "").trim();
-
-  if (!name || !email || !password || !organizationName)
-    return res.status(400).json({ error: "name, email, password and organization name are required" });
-  if (password.length < 8)
-    return res.status(400).json({ error: "Password must be at least 8 characters" });
-  if (!SELF_SERVE_ROLES.includes(role))
-    return res.status(400).json({ error: "Invalid designation" });
+app.post("/api/auth/register", authLimiter, asyncHandler(async (req, res) => {
+  const parsed = registerSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return rejectInvalid(res, parsed.error);
+  const { name, email, password, role, organizationName } = parsed.data;
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return res.status(409).json({ error: "An account with this email already exists" });
@@ -72,7 +72,8 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
   }
 
   const user = await prisma.user.create({
-    data: { organizationId: org.id, name, email, role, passwordHash: hashPassword(password) },
+    // trim to match login's verify step - historic hashes are of trimmed input
+    data: { organizationId: org.id, name, email, role, passwordHash: hashPassword(password.trim()) },
   });
 
   // Register = logged in immediately (no second step).
@@ -82,19 +83,31 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
   res.status(201).json({ token: signToken(authUser), user: authUser });
 }));
 
-app.post("/api/auth/login", asyncHandler(async (req, res) => {
-  // Trim + lowercase: copy-pasted credentials often carry an invisible
-  // trailing space/newline, and emails are case-insensitive by convention.
-  const email = String(req.body?.email ?? "").trim().toLowerCase();
-  const password = String(req.body?.password ?? "").trim();
-  if (!email || !password) return res.status(400).json({ error: "email and password required" });
+app.post("/api/auth/login", authLimiter, asyncHandler(async (req, res) => {
+  // loginSchema trims + lowercases the email (copy-pasted credentials often
+  // carry an invisible trailing space; emails are case-insensitive).
+  const parsed = loginSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return rejectInvalid(res, parsed.error);
+  const { email, password } = parsed.data;
+
+  // Per-account exponential backoff (see security/rateLimit.ts): a growing
+  // wait after repeated failures, keyed by account, not IP.
+  const gate = loginGate(email);
+  if (gate.blocked) {
+    res.set("Retry-After", String(gate.retryAfterSec));
+    return res.status(429).json({
+      error: `Too many failed attempts for this account - try again in ${gate.retryAfterSec}s`,
+    });
+  }
 
   const user = await prisma.user.findUnique({ where: { email }, include: { organization: true } });
   // Same error for "no such user" and "wrong password" - never help attackers
   // figure out which emails exist.
-  if (!user || !verifyPassword(password, user.passwordHash)) {
+  if (!user || !verifyPassword(password.trim(), user.passwordHash)) {
+    noteLoginFailure(email);
     return res.status(401).json({ error: "Invalid email or password" });
   }
+  noteLoginSuccess(email);
 
   const authUser: AuthUser = {
     id: user.id, organizationId: user.organizationId, organizationName: user.organization.name,
@@ -106,10 +119,24 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
 // Everything below requires a valid login token. The user's organizationId
 // becomes the tenant - no more spoofable x-org-id header.
 app.use("/api", requireAuth);
+// Looser per-USER rate limit on the authenticated API (keyed by user id from
+// the verified JWT, so one office IP never throttles innocent colleagues).
+app.use("/api", apiLimiter);
 
 app.get("/api/auth/me", (req, res) => res.json((req as any).user));
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: env.UPLOAD_MAX_MB * 1024 * 1024 },
+  // First gate: declared type must be PDF. The REAL check is the "%PDF-"
+  // content signature at the ingest front door - this just fails fast.
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype !== "application/pdf") {
+      return cb(new InvalidPdfError("Only PDF files are accepted"));
+    }
+    cb(null, true);
+  },
+});
 
 // ---- INGEST: the front door of the whole pipeline ---------------------------
 // The actual ingest logic lives in ingest/ingestFile.ts, shared with the
@@ -131,8 +158,11 @@ app.post("/api/documents/upload", requireRole("AP_CLERK", "FINANCE_HEAD", "CFO",
     }
     res.status(201).json({ documentId: result.documentId, status: "QUEUED" });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e instanceof Error ? e.message : "Upload failed" });
+    // Bad file = client's fault, say why. Anything else = ours: log the full
+    // details server-side, tell the user something generic (no internals).
+    if (e instanceof InvalidPdfError) return res.status(400).json({ error: e.message });
+    console.error("Upload failed:", e);
+    res.status(500).json({ error: "Upload failed - the details have been logged" });
   }
 });
 
@@ -143,7 +173,9 @@ app.post("/api/documents/upload", requireRole("AP_CLERK", "FINANCE_HEAD", "CFO",
 // pagination lands and the browser holds just one page.
 app.get("/api/documents", asyncHandler(async (req, res) => {
   const orgId = (req as any).orgId as string;
-  const q = String(req.query.q ?? "").trim().slice(0, 100);
+  const parsedQ = searchQuerySchema.safeParse(req.query.q);
+  if (!parsedQ.success) return rejectInvalid(res, parsedQ.error);
+  const q = parsedQ.data ?? "";
   const docs = await prisma.ingestedDocument.findMany({
     where: {
       organizationId: orgId,
@@ -166,6 +198,8 @@ app.get("/api/documents", asyncHandler(async (req, res) => {
 
 app.get("/api/documents/:id", asyncHandler(async (req, res) => {
   const orgId = (req as any).orgId as string;
+  if (!uuidSchema.safeParse(req.params.id).success)
+    return res.status(400).json({ error: "Invalid document id" });
   const doc = await prisma.ingestedDocument.findFirst({
     where: { id: req.params.id, organizationId: orgId },
     include: {
@@ -192,6 +226,8 @@ app.get("/api/approvals", asyncHandler(async (req, res) => {
 async function decideApproval(req: Request, res: Response, decision: "APPROVED" | "REJECTED") {
   const orgId = (req as any).orgId as string;
   const user = (req as any).user as AuthUser;
+  if (!uuidSchema.safeParse(req.params.id).success)
+    return res.status(400).json({ error: "Invalid task id" });
   // The audit log records the REAL logged-in person - not a typed-in name.
   const decidedBy = `${user.name} (${user.role})`;
 
@@ -269,6 +305,11 @@ app.post("/api/approvals/:id/reject", asyncHandler((req, res) => decideApproval(
 // ---- PAY: the final step (finance roles only) -----------------------------------
 app.post("/api/documents/:id/pay", requireRole("FINANCE_HEAD", "CFO", "ADMIN"), asyncHandler(async (req, res) => {
   const orgId = (req as any).orgId as string;
+  if (!uuidSchema.safeParse(req.params.id).success)
+    return res.status(400).json({ error: "Invalid document id" });
+  const parsedBody = paySchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) return rejectInvalid(res, parsedBody.error);
+
   const doc = await prisma.ingestedDocument.findFirst({
     where: { id: req.params.id, organizationId: orgId },
     include: { extraction: true },
@@ -279,7 +320,7 @@ app.post("/api/documents/:id/pay", requireRole("FINANCE_HEAD", "CFO", "ADMIN"), 
   if (!doc.erpInvoiceId || !doc.extraction?.amount)
     return res.status(500).json({ error: "Missing ERP invoice link or amount" });
 
-  const reference = (req.body?.reference as string) || `UTR-${Date.now()}`;
+  const reference = parsedBody.data.reference || `UTR-${Date.now()}`;
   await erp.createPayment(orgId, {
     invoiceId: doc.erpInvoiceId,
     amount: Number(doc.extraction.amount),
@@ -293,15 +334,35 @@ app.post("/api/documents/:id/pay", requireRole("FINANCE_HEAD", "CFO", "ADMIN"), 
   res.json({ ok: true });
 }));
 
+// Unknown /api path: clean JSON 404 (not Express's default HTML page, which
+// names the framework and echoes the path back).
+app.use("/api", (_req: Request, res: Response) => res.status(404).json({ error: "Not found" }));
+
 // ---- CENTRAL ERROR HANDLER - must be registered LAST -------------------------
 // Any error thrown in any route lands here and becomes a clean JSON response.
 // Without this, one rejected promise would kill the whole process (Node 15+).
+// Policy: OPERATIONAL errors (ERP said no, bad file, body too big) carry a
+// curated, safe message to the user. UNEXPECTED errors are logged in full
+// server-side (stack and all) and the user gets a generic line - stack
+// traces, file paths, and raw Prisma/DB errors must never leave the server.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof erp.ErpError) {
     // The system of record said no - pass its reason through honestly.
     return res.status(err.status === 400 ? 409 : err.status).json({ error: `ERP: ${err.message}` });
   }
+  if (err instanceof InvalidPdfError) {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err instanceof multer.MulterError) {
+    const msg = err.code === "LIMIT_FILE_SIZE"
+      ? `File too large (max ${env.UPLOAD_MAX_MB} MB)`
+      : "Upload rejected";
+    return res.status(400).json({ error: msg });
+  }
+  if (err instanceof SyntaxError && "body" in (err as object)) {
+    return res.status(400).json({ error: "Invalid JSON body" });
+  }
   console.error("Unexpected error:", err);
-  res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
+  res.status(500).json({ error: "Something went wrong on our side - the details have been logged" });
 });

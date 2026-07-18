@@ -95,16 +95,23 @@ async function pollOnce(): Promise<void> {
 
         for (const pdf of pdfs) {
           const name = pdf.filename ?? `email-attachment-${Date.now()}.pdf`;
-          const result = await ingestFile(
-            env.GMAIL_ORG_ID,
-            name,
-            pdf.content, // Buffer with the attachment bytes
-            "EMAIL"
-          );
-          if (result.duplicate) {
-            console.log(`[gmail] "${name}" from ${from} - duplicate, skipped`);
-          } else {
-            console.log(`[gmail] "${name}" from ${from} - ingested → pipeline`);
+          try {
+            const result = await ingestFile(
+              env.GMAIL_ORG_ID,
+              name,
+              pdf.content, // Buffer with the attachment bytes
+              "EMAIL"
+            );
+            if (result.duplicate) {
+              console.log(`[gmail] "${name}" from ${from} - duplicate, skipped`);
+            } else {
+              console.log(`[gmail] "${name}" from ${from} - ingested → pipeline`);
+            }
+          } catch (e) {
+            // A bad attachment (fake PDF, oversized) must not wedge the
+            // poller: log it, skip it, and let the UID be marked processed -
+            // a bad file will never become a good one on retry.
+            console.error(`[gmail] "${name}" from ${from} - rejected: ${e instanceof Error ? e.message : e}`);
           }
         }
 
