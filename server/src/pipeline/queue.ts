@@ -3,17 +3,13 @@ import IORedis from "ioredis";
 import { env } from "../config/env.js";
 import { processDocument } from "./processDocument.js";
 
-// ----------------------------------------------------------------------------
-//  The job queue - now BullMQ backed by Valkey (the open-source Redis fork).
-//
+
 //  Why a queue at all? Extraction + ERP calls can fail halfway (ERP down,
 //  network blip, AI timeout). A queued job:
 //    - survives a server restart (jobs live in Valkey, not in memory),
 //    - retries automatically with exponential backoff,
 //    - never runs the same document twice at once.
-//
-//  
-// ----------------------------------------------------------------------------
+
 
 export const QUEUE_NAME = "process-document";
 
@@ -26,6 +22,7 @@ const connection = env.VALKEY_URL
   : { host: env.VALKEY_HOST, port: env.VALKEY_PORT, maxRetriesPerRequest: null as null };
 
 let queue: Queue | null = null;
+let worker: Worker<{ documentId: string }> | null = null;
 
 // Exposed for the Bull Board dashboard (visualizes jobs/retries/failures).
 export function getQueue(): Queue {
@@ -33,11 +30,21 @@ export function getQueue(): Queue {
   return queue;
 }
 
+// Graceful stop, called from the SIGTERM handler in index.ts.
+// worker.close() is polite by design: it stops taking NEW jobs and waits for
+// the job currently in hand to finish before resolving - so a redeploy can
+// never chop an invoice in half. Jobs still waiting in Valkey simply wait
+// there and are picked up by the next boot.
+export async function stopQueue(): Promise<void> {
+  if (worker) await worker.close();
+  if (queue) await queue.close();
+}
+
 export async function startQueue(): Promise<void> {
   queue = new Queue(QUEUE_NAME, { connection });
 
   // The worker: concurrency 1 = one document at a time (simple + safe for v1).
-  const worker = new Worker<{ documentId: string }>(
+  worker = new Worker<{ documentId: string }>(
     QUEUE_NAME,
     async (job) => {
       await processDocument(job.data.documentId);
