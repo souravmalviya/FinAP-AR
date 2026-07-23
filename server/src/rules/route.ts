@@ -6,10 +6,6 @@ import { ApproverRole } from "@prisma/client";
 //      < ₹50,000            -> nobody: auto-approve
 //      ₹50,000 – ₹5,00,000  -> FINANCE_HEAD
 //      > ₹5,00,000          -> CFO
-//
-//  v1 keeps thresholds as constants. Later they become per-organization
-//  rows in the DB so every customer configures their own policy.
-// ----------------------------------------------------------------------------
 
 const AUTO_APPROVE_BELOW = 50_000;
 const CFO_ABOVE = 500_000;
