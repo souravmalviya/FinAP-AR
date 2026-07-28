@@ -4,9 +4,66 @@
 //
 // (Scanned/photographed invoices have no embedded text and would need OCR -
 // e.g. AWS Textract. That alternative path would slot in right here.)
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+//
+// --- Why the stubs and the lazy import below ---------------------------------
+// pdfjs bundles a canvas RENDERING layer that constructs a DOMMatrix the
+// moment the module is evaluated. Browsers have that global; in Node pdfjs
+// borrows it from the optional native package @napi-rs/canvas, which is not
+// always loadable (Windows Smart App Control blocks its unsigned Skia binary;
+// slim Linux images often skip optional dependencies). When it is missing,
+// merely importing pdfjs crashes the whole server at boot.
+//
+// We only ever READ TEXT - every DOMMatrix use in pdfjs lives in the canvas
+// path we never execute - so the rendering layer only has to LOAD, not work.
+// Minimal stubs achieve that with no 27 MB native dependency, and make PDF
+// parsing behave identically on every machine we deploy to.
+//
+// The import is dynamic (not top-level) because the stubs must be installed
+// BEFORE pdfjs is evaluated, and import statements are hoisted above ordinary
+// code. Bonus: pdfjs now loads on first use instead of at boot.
+
+type PdfjsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+
+let pdfjs: PdfjsModule | null = null;
+
+function installRenderingStubs(): void {
+  const g = globalThis as unknown as Record<string, unknown>;
+
+  if (typeof g.DOMMatrix === "undefined") {
+    // Identity matrix with the standard properties. Deliberately NO
+    // multiply/translate/scale methods: if rendering is ever added to this
+    // codebase it should fail loudly here, not silently compute garbage.
+    g.DOMMatrix = class DOMMatrix {
+      a = 1;
+      b = 0;
+      c = 0;
+      d = 1;
+      e = 0;
+      f = 0;
+      constructor(init?: number[]) {
+        if (Array.isArray(init) && init.length >= 6) {
+          [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+        }
+      }
+    };
+  }
+
+  if (typeof g.Path2D === "undefined") {
+    g.Path2D = class Path2D {};
+  }
+}
+
+async function loadPdfjs(): Promise<PdfjsModule> {
+  if (!pdfjs) {
+    installRenderingStubs(); // must run before the module is evaluated
+    pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  }
+  return pdfjs;
+}
 
 export async function pdfToText(bytes: Buffer): Promise<string> {
+  const { getDocument } = await loadPdfjs();
+
   // verbosity: 0 silences a harmless "standardFontDataUrl" warning in Node.
   const loadingTask = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });
   const pdf = await loadingTask.promise;

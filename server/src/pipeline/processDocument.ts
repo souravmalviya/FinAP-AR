@@ -13,7 +13,7 @@ import * as erp from "../erp/erpClient.js";
 //
 //    EXTRACT (AI)  ->  VERIFY (rules)  ->  ERP WRITE  ->  ROUTE (rules)
 //
-//  This function is run BY THE QUEUE WORKER, so if it throws, pg-boss
+//  This function is run BY THE QUEUE WORKER, so if it throws, BullMQ
 //  retries it automatically. Every step writes an audit event.
 // ----------------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ export async function processDocument(documentId: string): Promise<void> {
         `₹${extracted.amount} requires ${decision.role} approval - task created`);
     }
   } catch (err) {
-    // Let pg-boss retry; if retries are exhausted it stays FAILED.
+    // Let BullMQ retry; if retries are exhausted it stays FAILED.
     const message = err instanceof Error ? err.message : String(err);
     await prisma.ingestedDocument.update({
       where: { id: documentId },

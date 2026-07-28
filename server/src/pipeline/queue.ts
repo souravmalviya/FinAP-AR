@@ -74,7 +74,7 @@ export async function startQueue(): Promise<void> {
 }
 
 // Enqueue a document for processing. Retries: 3 attempts with exponential
-// backoff (5s, 10s, 20s) - same policy we had under pg-boss.
+// backoff (5s, 10s, 20s).
 export async function enqueueDocument(documentId: string): Promise<void> {
   if (!queue) throw new Error("Queue not started");
   await queue.add(
