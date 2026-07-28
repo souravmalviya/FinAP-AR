@@ -48,7 +48,7 @@ export default function LoginPage() {
             <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase" }}>Email</label>
             <input
               type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="finhead@sortof.test"
+              placeholder="finhead@acme.test"
               style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 9, fontSize: 14, marginTop: 4 }}
             />
           </div>

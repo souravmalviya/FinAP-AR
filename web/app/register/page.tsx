@@ -81,7 +81,7 @@ export default function RegisterPage() {
           <div>
             <label style={labelStyle}>Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="priya@sortof.test" style={inputStyle} />
+              placeholder="priya@acme.test" style={inputStyle} />
           </div>
           <div>
             <label style={labelStyle}>Password</label>

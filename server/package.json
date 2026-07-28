@@ -5,14 +5,15 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "prisma generate && tsc",
+    "start": "prisma migrate deploy && node dist/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "sample:invoice": "tsx scripts/makeSampleInvoice.ts"
   },
   "license": "MIT",
+  "engines": { "node": ">=22" },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@aws-sdk/client-s3": "^3.1088.0",

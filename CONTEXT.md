@@ -144,10 +144,12 @@ branches: NEEDS_REVIEW, DUPLICATE, FAILED, REJECTED; <50k skips human to APPROVE
 - JWT (12h, jsonwebtoken; bcryptjs hashes) carries id/org id/org name/name/role.
   Tenant comes FROM THE TOKEN server-side (requireAuth sets req.orgId) - the old
   spoofable x-org-id header on Verity's API is gone. Org name chip in top bar.
-- Legacy org "org_demo" (name "Sortof (Demo)") was backfilled INSIDE the
+- Legacy org id "org_demo" (display name "Acme Corp") was backfilled INSIDE the
   migration SQL before adding the User FK (real migration technique). Demo users
-  (*@sortof.test / demo1234): admin=Sourav ADMIN, clerk=Anil AP_CLERK,
+  (*@acme.test / demo1234): admin=Sourav ADMIN, clerk=Anil AP_CLERK,
   finhead=Rhea FINANCE_HEAD, cfo=Meera CFO. Gmail poller org: GMAIL_ORG_ID=org_demo.
+  The id stays "org_demo" on purpose: it is the x-org-id tenant tag miniERP
+  knows, and scripts/seedUsers.ts now creates the org too (works on an empty DB).
 - Login trims+lowercases inputs (copy-paste whitespace bug he actually hit).
 
 ## 5. ERP adapter registry (the swappability seam)
