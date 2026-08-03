@@ -24,12 +24,37 @@ export type VerifyResult =
       detail?: object;
     };
 
-// Vendor names never match exactly ("Acer India Pvt Ltd" vs "Acer").
-// Normalise both sides and accept containment either way.
-function vendorMatches(erpName: string, extractedName: string): boolean {
-  const a = erpName.toLowerCase().trim();
-  const b = extractedName.toLowerCase().trim();
-  return a.includes(b) || b.includes(a);
+// --- Vendor matching ---------------------------------------------------------
+// Invoices rarely print a company's registered name exactly ("Acer" on the
+// letterhead vs "Acer India Pvt Ltd" in the ERP), so containment matching is
+// necessary. But containment alone is dangerous when several suppliers have
+// overlapping names: picking whichever row the ERP happened to return first
+// can attach the invoice to the WRONG vendor, which then fails rule 4 with a
+// confusing reason - or worse, quietly matches a PO that isn't theirs.
+//
+// So: exact wins first, and a genuinely ambiguous name goes to a human rather
+// than being guessed. Money never moves on a coin flip.
+export type VendorMatch =
+  | { kind: "found"; vendor: erp.ErpVendor }
+  | { kind: "none" }
+  | { kind: "ambiguous"; candidates: string[] };
+
+export function matchVendor(vendors: erp.ErpVendor[], extractedName: string): VendorMatch {
+  const wanted = extractedName.toLowerCase().trim();
+
+  // Pass 1 - exact name, case-insensitive. The unambiguous case.
+  const exact = vendors.filter((v) => v.name.toLowerCase().trim() === wanted);
+  if (exact.length > 0) return { kind: "found", vendor: exact[0] };
+
+  // Pass 2 - containment either direction.
+  const partial = vendors.filter((v) => {
+    const name = v.name.toLowerCase().trim();
+    return name.includes(wanted) || wanted.includes(name);
+  });
+  if (partial.length === 1) return { kind: "found", vendor: partial[0] };
+  if (partial.length > 1) return { kind: "ambiguous", candidates: partial.map((v) => v.name) };
+
+  return { kind: "none" };
 }
 
 export async function verify(
@@ -48,13 +73,21 @@ export async function verify(
   // Rule 2 - the vendor must already exist in the ERP.
   // (An invoice from an unknown company is exactly how fraud starts.)
   const vendors = await erp.listVendors(organizationId);
-  const vendor = vendors.find((v) => vendorMatches(v.name, extracted.vendorName!));
-  if (!vendor) {
+  const match = matchVendor(vendors, extracted.vendorName);
+  if (match.kind === "none") {
     return {
       ok: false,
       reason: `Unknown vendor "${extracted.vendorName}" - not registered in the ERP`,
     };
   }
+  if (match.kind === "ambiguous") {
+    return {
+      ok: false,
+      reason: `Vendor "${extracted.vendorName}" matches ${match.candidates.length} suppliers in the ERP - a human must decide which one`,
+      detail: { candidates: match.candidates },
+    };
+  }
+  const vendor = match.vendor;
 
   // Rule 3 - the invoice must reference a PO we actually raised.
   if (!extracted.poNumber) {

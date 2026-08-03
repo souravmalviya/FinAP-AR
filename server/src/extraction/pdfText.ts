@@ -61,6 +61,15 @@ async function loadPdfjs(): Promise<PdfjsModule> {
   return pdfjs;
 }
 
+// Real-world PDFs (bank receipts, credit notes, anything not produced by our
+// own pdfkit samples) can carry NUL bytes and other C0 control characters in
+// their text layer. PostgreSQL's text type rejects 0x00 outright - error 22021,
+// "invalid byte sequence for encoding UTF8" - so storing the extraction would
+// fail and the document would end up FAILED through no fault of its own.
+// Tab (09), newline (0A) and carriage return (0D) are kept; nothing else in
+// that range carries meaning on an invoice.
+const CONTROL_CHARS = new RegExp("[\u0000-\u0008\u000B\u000C\u000E-\u001F]", "g");
+
 export async function pdfToText(bytes: Buffer): Promise<string> {
   const { getDocument } = await loadPdfjs();
 
@@ -78,5 +87,5 @@ export async function pdfToText(bytes: Buffer): Promise<string> {
     }
   }
   await loadingTask.destroy();
-  return text;
+  return text.replace(CONTROL_CHARS, "");
 }

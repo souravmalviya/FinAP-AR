@@ -2,6 +2,10 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/auth/auth.js";
 import { env } from "../src/config/env.js";
+// Looks redundant (process is a Node global) but is NOT: tsconfig only includes
+// src/**, so this file is outside the TS project and the editor loads it without
+// @types/node. Without this import you get "Cannot find name 'process'".
+import process from "process";
 
 // Seeds the demo organization and its team. Run with: npx tsx scripts/seedUsers.ts
 // Everything is an upsert, so it is safe to re-run against an existing database
