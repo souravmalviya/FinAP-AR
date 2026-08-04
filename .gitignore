@@ -19,3 +19,6 @@ docs/
 .DS_Store
 Thumbs.db
 *.log
+
+# --- TypeScript incremental build cache (regenerated on every build) ---
+*.tsbuildinfo

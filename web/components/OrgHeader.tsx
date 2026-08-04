@@ -42,7 +42,9 @@ export default function OrgHeader() {
         <div className="org">
           {user.organizationName && <span className="orgname">{user.organizationName}</span>}
           <span className="whoami">
-            <b>{user.name}</b>
+            {/* .username is hidden on phones (globals.css) - the role chip and
+                sign-out matter more than the full name when space is tight. */}
+            <b className="username">{user.name}</b>
             <i className={`rolechip r-${user.role}`}>{user.role.replace(/_/g, " ")}</i>
           </span>
           <button className="linkbtn" onClick={logout}>Sign out</button>
