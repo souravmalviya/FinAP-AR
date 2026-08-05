@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "@/lib/api";
 import Logo from "@/components/Logo";
+import PasswordInput from "@/components/PasswordInput";
 
 // The front door. On success the token + user land in localStorage and every
 // later API call carries them. Role decides what the server lets you do.
@@ -49,15 +50,21 @@ export default function LoginPage() {
             <input
               type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="finhead@acme.test"
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 9, fontSize: 14, marginTop: 4 }}
+              autoComplete="email"
+              // fontFamily: form controls do NOT inherit the page font by
+              // default. Without it this box renders in the browser's default
+              // form font, and sits 3px shorter than the password field below.
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 9, fontSize: 14, marginTop: 4, fontFamily: "inherit" }}
             />
           </div>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase" }}>Password</label>
-            <input
-              type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+            <label htmlFor="password" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase" }}>Password</label>
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={setPassword}
               placeholder="••••••••"
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 9, fontSize: 14, marginTop: 4 }}
+              autoComplete="current-password"
             />
           </div>
           {error && <div className="flag" style={{ margin: 0 }}>⚠ {error}</div>}

@@ -58,7 +58,7 @@ export default function ApprovalsPage() {
       <h1>Approvals</h1>
       <p className="sub">
         Invoices the rules verified, but that exceed the auto-approve threshold
-        (₹50k–5L → Finance Head · above ₹5L → CFO). Your decision is written to the audit log.
+        (₹50k-5L → Finance Head · above ₹5L → CFO). Your decision is written to the audit log.
       </p>
 
       {error && <div className="flag">⚠ {error}</div>}

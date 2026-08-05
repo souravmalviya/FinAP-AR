@@ -35,7 +35,7 @@ model Organization {
 
 // A person who can log into the dashboard. The role decides what they may do:
 //   AP_CLERK     -> upload & watch documents, no approvals
-//   FINANCE_HEAD -> approve invoices in their band (50k–5L) + pay
+//   FINANCE_HEAD -> approve invoices in their band (50k-5L) + pay
 //   CFO          -> approve anything + pay
 //   ADMIN        -> everything (org owner)
 model User {
@@ -167,7 +167,7 @@ enum ExtractEngine {
 }
 
 enum ApproverRole {
-  FINANCE_HEAD // 50k – 5,00,000
+  FINANCE_HEAD // 50k - 5,00,000
   CFO // > 5,00,000
 }
 

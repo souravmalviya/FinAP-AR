@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { register } from "@/lib/api";
 import Logo from "@/components/Logo";
+import PasswordInput from "@/components/PasswordInput";
 
 // Self-service sign-up with a designation dropdown. The chosen role decides
 // what the server will allow (EMPLOYEE = view-only). Registering logs you in
@@ -12,14 +13,17 @@ import Logo from "@/components/Logo";
 const DESIGNATIONS = [
   { value: "EMPLOYEE", label: "Employee", hint: "view-only access" },
   { value: "AP_CLERK", label: "AP Clerk", hint: "uploads & tracks invoices" },
-  { value: "FINANCE_HEAD", label: "Finance Head", hint: "approves ₹50k–5L invoices" },
+  { value: "FINANCE_HEAD", label: "Finance Head", hint: "approves ₹50k-5L invoices" },
   { value: "CFO", label: "CFO", hint: "approves any invoice" },
   { value: "ADMIN", label: "Admin", hint: "full access - everything the CFO can do, plus administration" },
 ];
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)",
-  borderRadius: 9, fontSize: 14, marginTop: 4,
+  // fontFamily: form controls do NOT inherit the page font by default - without
+  // this they render in the browser's default form font while the rest of the
+  // app uses Segoe UI. It also keeps their height in step with .pwfield.
+  borderRadius: 9, fontSize: 14, marginTop: 4, fontFamily: "inherit",
 };
 const labelStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase",
@@ -84,10 +88,15 @@ export default function RegisterPage() {
               placeholder="priya@acme.test" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Password</label>
-            <input type="password" required minLength={8} value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="at least 8 characters" style={inputStyle} />
+            <label htmlFor="password" style={labelStyle}>Password</label>
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={setPassword}
+              placeholder="at least 8 characters"
+              minLength={8}
+              autoComplete="new-password"
+            />
           </div>
           <div>
             <label style={labelStyle}>Designation</label>

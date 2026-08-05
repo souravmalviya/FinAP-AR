@@ -124,7 +124,7 @@ export default function DocumentsPage() {
       <p className="sub">Every invoice that entered the pipeline, newest first. Click a row for its full audit timeline.</p>
 
       <div className="stats">
-        <div className="stat t-accent"><div className="n">{docs?.length ?? "–"}</div><div className="l">Total</div></div>
+        <div className="stat t-accent"><div className="n">{docs?.length ?? "-"}</div><div className="l">Total</div></div>
         <div className="stat t-blue"><div className="n">{count("QUEUED", "EXTRACTING", "RECEIVED")}</div><div className="l">Processing</div></div>
         <div className="stat t-amber"><div className="n">{count("PENDING_APPROVAL")}</div><div className="l">Awaiting approval</div></div>
         <div className="stat t-red"><div className="n">{count("NEEDS_REVIEW", "FAILED")}</div><div className="l">Needs review</div></div>

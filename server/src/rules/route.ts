@@ -4,7 +4,7 @@ import { ApproverRole } from "@prisma/client";
 //  ROUTE (Layer 5) - who must approve? Pure threshold rules.
 //
 //      < ₹50,000            -> nobody: auto-approve
-//      ₹50,000 – ₹5,00,000  -> FINANCE_HEAD
+//      ₹50,000 - ₹5,00,000  -> FINANCE_HEAD
 //      > ₹5,00,000          -> CFO
 
 const AUTO_APPROVE_BELOW = 50_000;
