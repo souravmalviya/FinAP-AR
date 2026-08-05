@@ -14,6 +14,9 @@ samples/
 
 # --- internal design/engineering docs (kept local, not published) ---
 docs/
+# Personal project handoff notes: hosting map, demo logins, deploy war stories.
+# Useful to me, noise to anyone reading this repo. Lives in OneDrive\Documents.
+CONTEXT.md
 
 # --- OS / editor junk ---
 .DS_Store
